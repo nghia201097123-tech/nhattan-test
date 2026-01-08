@@ -1,10 +1,24 @@
 import { HttpStatus } from "@nestjs/common";
-import axios from "axios";
 import { ResponseData } from "src/utils.common/utils.response.common/utils.response.common";
 import { ChannelBranch } from "../channel-order/entity/channel-branch";
 import { ChannelOrderFoodTokenEntity } from "../channel-order/entity/channel-order-food-token.entity";
-import { ChannelOrderFoodApiEnum } from "src/utils.common/utils.enum.common/utils.channel-order-food-api.enum";
 import { ChannelOrderFoodNumberEnum } from "src/utils.common/utils.enum.common/utils.channel-order-food-number";
+
+const { exec } = require("child_process");
+import { promisify } from 'util';
+const execAsync = promisify(exec);
+
+/**
+ * Safe JSON parse với error handling
+ */
+function safeJsonParse<T>(jsonString: string, defaultValue: T): T {
+  try {
+    return JSON.parse(jsonString);
+  } catch (error) {
+    console.error('[safeJsonParse] Failed to parse JSON:', error);
+    return defaultValue;
+  }
+}
 
 export default async function processTask(
   channelFoodToken: ChannelOrderFoodTokenEntity
@@ -126,34 +140,25 @@ export default async function processTask(
 
 // ------------------ SHF --------------------
 
-function createXSapRi(): string {
-  // Tạo chuỗi 24 ký tự '1'
-  const phanDau = '1'.repeat(24);
-
-  // Tạo chuỗi 24 ký tự số ngẫu nhiên từ 0 đến 9
-  const phanSau = Array.from({ length: 24 }, () => Math.floor(Math.random() * 10).toString()).join('');
-
-  // Kết hợp hai phần lại
-  return phanDau + phanSau;
-}
-
 async function getSHFBranchList(
   url: string,
   url_get_branch_info: string,
   x_merchant_token: string
 ): Promise<any> {
   try {
-    let headers = {
-      "x-merchant-token": x_merchant_token,
-    };
-
-    const body = {
+    const body = JSON.stringify({
       page_size: 999999,
-    };
+    });
 
-    const data = await axios.post(url, body, { headers });
+    const curlCommand = `curl -s -X POST '${url}' \
+      --header 'x-merchant-token: ${x_merchant_token}' \
+      --header 'Content-Type: application/json' \
+      --data '${body.replace(/'/g, "'\\''")}'`;
 
-    if (data.data.error_code == 10007) {
+    const result = await execAsync(curlCommand);
+    const data = safeJsonParse(result.stdout, { error_code: 0, data: { store_list: [] } });
+
+    if (data.error_code == 10007) {
       return new ResponseData(
         HttpStatus.UNAUTHORIZED,
         "Vui lòng cập nhập token cho app SHF",
@@ -161,7 +166,7 @@ async function getSHFBranchList(
       );
     } else {
 
-      const allBranches = data.data.data.store_list.map((store) => ({
+      const allBranches = (data.data?.store_list || []).map((store: any) => ({
         merchant_id: "0",
         branch_id: store.store_id,
         branch_name: store.store_name,
@@ -169,30 +174,12 @@ async function getSHFBranchList(
         branch_phone: ''
       }));
 
-      // const headers_detail = {
-      //   "x-foody-access-token": x_merchant_token,
-      //   "x-foody-entity-id": 0,
-      //   "x-sap-ri": createXSapRi(),
-      //   'user-agent' : ChannelOrderFoodApiEnum.SHF_USER_AGENT,
-      //   'x-foody-app-type':"1024",
-      // };
-
-      // for (const branch of allBranches) {
-
-      //   headers_detail["x-foody-entity-id"] = +branch.branch_id;
-
-      //   const data = await axios.get(url_get_branch_info, { headers: headers_detail });
-
-      //   branch.branch_address = data.data.data.address + ", " + data.data.data.district_name + ", " + data.data.data.city_name;
-      //   branch.branch_phone = formatPhoneNumber(data.data.data?.primary_contact_number ?? "")
-      // }
-
       return new ResponseData(HttpStatus.OK, "SUCCESS", allBranches);
     }
-  } catch (error) {
-
-    const statusCode = error.response?.status || HttpStatus.BAD_REQUEST;
-    const message = error.response?.statusText || "Lỗi rồi getSHFBillNewList";
+  } catch (error: any) {
+    console.error('[getSHFBranchList] Error:', error.message);
+    const statusCode = HttpStatus.BAD_REQUEST;
+    const message = error.message || "Lỗi rồi getSHFBranchList";
 
     return new ResponseData(statusCode, message, []);
   }
@@ -207,26 +194,28 @@ async function getGRFBranchDetail(
   access_token: string
 ): Promise<any> {
   try {
-    const headers = {
-      "Content-Type": "application/json",
-      "x-mts-ssid": access_token,
-      "x-user-type": "user-profile",
-    };
 
-    const data = await axios.get(url, { headers });
+    const curlCommand = `curl -s -X GET '${url}' \
+      --header 'Content-Type: application/json' \
+      --header 'x-mts-ssid: ${access_token}' \
+      --header 'x-user-type: user-profile'`;
 
-    if (data.status == 200) {
+    const result = await execAsync(curlCommand);
+    const data = safeJsonParse(result.stdout, { data: null });
+
+    if (data.data?.grab_food_profile?.merchant?.name) {
       return new ResponseData(HttpStatus.OK, "SUCCESS", {
-        name: data.data.data.grab_food_profile.merchant.name,
-        address: data.data.data.grab_food_profile.merchant.address,
-        phone: data.data.data.grab_food_profile.merchant.contractNumber
+        name: data.data.grab_food_profile.merchant.name,
+        address: data.data.grab_food_profile.merchant.address,
+        phone: data.data.grab_food_profile.merchant.contractNumber
       });
     } else {
       return new ResponseData(HttpStatus.OK, "BAD REQUEST", { name: "" });
     }
-  } catch (error) {
-    const statusCode = error.response?.status || HttpStatus.BAD_REQUEST;
-    const message = error.response?.statusText || "Lỗi rồi getSHFBillNewList";
+  } catch (error: any) {
+    console.error('[getGRFBranchDetail] Error:', error.message);
+    const statusCode = HttpStatus.BAD_REQUEST;
+    const message = error.message || "Lỗi rồi getGRFBranchDetail";
 
     return new ResponseData(statusCode, message, { name: "" });
   }
@@ -241,14 +230,7 @@ async function loginGRF(
 ): Promise<any> {
   try {
 
-    const headers = {
-      "Content-Type": "application/json",
-      "user-agent": "Grab Merchant/4.126.0 (ios 16.7.10; Build 102734851)",
-      "mex-country": "VN",
-      "x-currency": "VND"
-    }
-
-    const body = {
+    const body = JSON.stringify({
       login_source: "TROY_APP_MAIN_USERNAME_PASSWORD",
       session_data: {
         mobile_session_data: {
@@ -260,23 +242,31 @@ async function loginGRF(
       without_force_logout: true,
       password: password,
       username: usernamne,
-    };
+    });
 
-    const data = await axios.post(url, JSON.stringify(body), { headers });
+    const curlCommand = `curl -s -X POST '${url}' \
+      --header 'Content-Type: application/json' \
+      --header 'user-agent: Grab Merchant/4.126.0 (ios 16.7.10; Build 102734851)' \
+      --header 'mex-country: VN' \
+      --header 'x-currency: VND' \
+      --data '${body.replace(/'/g, "'\\''")}'`;
 
-    if (data.data.data.code === 200) {
+    const result = await execAsync(curlCommand);
+    const data = safeJsonParse(result.stdout, { data: { code: 0 } });
+
+    if (data.data?.code === 200) {
       return new ResponseData(HttpStatus.OK, "SUCCESS", {
-        device_id: !data.data.data.active_session
+        device_id: !data.data.active_session
           ? device_id
-          : !data.data.data.active_session.mobile_session_data
+          : !data.data.active_session.mobile_session_data
             ? device_id
-            : data.data.data.active_session.mobile_session_data.device_id,
-        device_brand: !data.data.data.active_session
+            : data.data.active_session.mobile_session_data.device_id,
+        device_brand: !data.data.active_session
           ? device_brand
-          : !data.data.data.active_session.mobile_session_data
+          : !data.data.active_session.mobile_session_data
             ? device_brand
-            : data.data.data.active_session.mobile_session_data.device_brand,
-        jwt: !data.data.data.data ? "" : data.data.data.data.jwt,
+            : data.data.active_session.mobile_session_data.device_brand,
+        jwt: !data.data.data ? "" : data.data.data.jwt,
       });
     } else {
       return new ResponseData(
@@ -289,9 +279,10 @@ async function loginGRF(
         }
       );
     }
-  } catch (error) {
-    const statusCode = error.response?.status || HttpStatus.BAD_REQUEST;
-    const message = error.response?.statusText || "Lỗi rồi getSHFBillNewList";
+  } catch (error: any) {
+    console.error('[loginGRF] Error:', error.message);
+    const statusCode = HttpStatus.BAD_REQUEST;
+    const message = error.message || "Lỗi rồi loginGRF";
 
     return new ResponseData(statusCode, message, {
       device_id: device_id,
@@ -307,11 +298,8 @@ async function logoutGRF(
   password: string
 ): Promise<any> {
   try {
-    const headers = {
-      "Content-Type": "application/json",
-    };
 
-    const body = {
+    const body = JSON.stringify({
       login_source: "TROY_APP_MAIN_USERNAME_PASSWORD",
       session_data: {
         mobile_session_data: {
@@ -323,15 +311,20 @@ async function logoutGRF(
       without_force_logout: false,
       password: password,
       username: usernamne,
-    };
+    });
 
-    const data = await axios.post(url, JSON.stringify(body), { headers });
+    const curlCommand = `curl -s -X POST '${url}' \
+      --header 'Content-Type: application/json' \
+      --data '${body.replace(/'/g, "'\\''")}'`;
 
-    if (data.data.data.code === 200) {
+    const result = await execAsync(curlCommand);
+    const data = safeJsonParse(result.stdout, { data: { code: 0 } });
+
+    if (data.data?.code === 200) {
       return new ResponseData(HttpStatus.OK, "SUCCESS", {
         device_id: "",
         device_brand: "",
-        jwt: !data.data.data.data ? "" : data.data.data.data.jwt,
+        jwt: !data.data.data ? "" : data.data.data.jwt,
       });
     } else {
       return new ResponseData(
@@ -344,8 +337,9 @@ async function logoutGRF(
         }
       );
     }
-  } catch (error) {
-    return new ResponseData(error.response.status, error.response.statusText, {
+  } catch (error: any) {
+    console.error('[logoutGRF] Error:', error.message);
+    return new ResponseData(HttpStatus.BAD_REQUEST, error.message || "Error", {
       device_id: "",
       device_brand: "",
       jwt: "",
@@ -417,20 +411,22 @@ async function getBEFBranchList(
   access_token: string
 ): Promise<any> {
   try {
-    const headers = {
-      "Content-Type": "application/json",
-    };
 
-    const body = {
+    const body = JSON.stringify({
       access_token: access_token,
-    };
+    });
 
-    const data = await axios.post(url, JSON.stringify(body), { headers });
+    const curlCommand = `curl -s -X POST '${url}' \
+      --header 'Content-Type: application/json' \
+      --data '${body.replace(/'/g, "'\\''")}'`;
 
-    if (data.data.code == 143) {
+    const result = await execAsync(curlCommand);
+    const data = safeJsonParse(result.stdout, { code: 0, data: [] });
 
-      const allBranches = data.data.data.reduce((accumulator, merchant) => {
-        const storeProfiles = merchant.store_profiles.map((store) => ({
+    if (data.code == 143) {
+
+      const allBranches = (data.data || []).reduce((accumulator: any[], merchant: any) => {
+        const storeProfiles = (merchant.store_profiles || []).map((store: any) => ({
           merchant_id: merchant.merchant_id,
           branch_id: store.store_id,
           branch_name: store.store_name,
@@ -440,28 +436,31 @@ async function getBEFBranchList(
         return accumulator.concat(storeProfiles);
       }, []);
 
-      const body_get_branch_info = {
-        access_token: access_token,
-        store_id: 0,
-        merchant_id: 0
-      };
-
       for (const branch of allBranches) {
 
-        body_get_branch_info.merchant_id = +branch.merchant_id;
-        body_get_branch_info.store_id = +branch.branch_id;
+        const body_get_branch_info = JSON.stringify({
+          access_token: access_token,
+          merchant_id: +branch.merchant_id,
+          store_id: +branch.branch_id
+        });
 
-        const dataGetBranchInfo = await axios.post(url_get_branch_info, JSON.stringify(body_get_branch_info), { headers });
-        branch.branch_phone = formatPhoneNumber(dataGetBranchInfo.data.store.phone_no);
+        const curlCommand2 = `curl -s -X POST '${url_get_branch_info}' \
+          --header 'Content-Type: application/json' \
+          --data '${body_get_branch_info.replace(/'/g, "'\\''")}'`;
+
+        const result2 = await execAsync(curlCommand2);
+        const dataGetBranchInfo = safeJsonParse(result2.stdout, { store: { phone_no: '' } });
+        branch.branch_phone = formatPhoneNumber(dataGetBranchInfo.store?.phone_no || '');
       }
 
       return new ResponseData(HttpStatus.OK, "SUCCESS", allBranches);
     } else {
-      return new ResponseData(HttpStatus.BAD_REQUEST, data.data.message, []);
+      return new ResponseData(HttpStatus.BAD_REQUEST, data.message || "Error", []);
     }
-  } catch (error) {
-    const statusCode = error.response?.status || HttpStatus.BAD_REQUEST;
-    const message = error.response?.statusText || "Lỗi ! getSHFBillNewList";
+  } catch (error: any) {
+    console.error('[getBEFBranchList] Error:', error.message);
+    const statusCode = HttpStatus.BAD_REQUEST;
+    const message = error.message || "Lỗi ! getBEFBranchList";
 
     return new ResponseData(statusCode, message, []);
   }
@@ -473,7 +472,7 @@ async function loginBEF(
   password: string
 ): Promise<any> {
   try {
-    let body = {};
+    let body: any = {};
 
     if (!usernamne.includes("@")) {
       usernamne = usernamne.replace(/^0/, "+84");
@@ -489,24 +488,28 @@ async function loginBEF(
       };
     }
 
-    const headers = {
-      "Content-Type": "application/json",
-    };
+    const bodyStr = JSON.stringify(body);
 
-    const data = await axios.post(url, JSON.stringify(body), { headers });
+    const curlCommand = `curl -s -X POST '${url}' \
+      --header 'Content-Type: application/json' \
+      --data '${bodyStr.replace(/'/g, "'\\''")}'`;
 
-    if (data.data.code == 143) {
+    const result = await execAsync(curlCommand);
+    const data = safeJsonParse(result.stdout, { code: 0, token: '' });
+
+    if (data.code == 143) {
       return new ResponseData(HttpStatus.OK, "SUCCESS", {
-        jwt: !data.data.token ? "" : data.data.token,
+        jwt: !data.token ? "" : data.token,
       });
     } else {
-      return new ResponseData(HttpStatus.BAD_REQUEST, data.data.message, {
+      return new ResponseData(HttpStatus.BAD_REQUEST, data.message || "Error", {
         jwt: "",
       });
     }
-  } catch (error) {
-    const statusCode = error.response?.status || HttpStatus.BAD_REQUEST;
-    const message = error.response?.statusText || "Lỗi ! getSHFBillNewList";
+  } catch (error: any) {
+    console.error('[loginBEF] Error:', error.message);
+    const statusCode = HttpStatus.BAD_REQUEST;
+    const message = error.message || "Lỗi ! loginBEF";
 
     return new ResponseData(statusCode, message, {
       jwt: "",
@@ -538,17 +541,17 @@ async function getCNVLBranchList(
   access_token: string
 ): Promise<any> {
   try {
-    const headers = {
-      "Content-Type": "application/json",
-      "Authorization": access_token
-    };
 
-    const data = await axios.get(url, { headers });
+    const curlCommand = `curl -s -X GET '${url}' \
+      --header 'Content-Type: application/json' \
+      --header 'Authorization: ${access_token}'`;
 
-    if (data.data.status != HttpStatus.OK) {
+    const result = await execAsync(curlCommand);
+    const data = safeJsonParse(result.stdout, { status: 0, locations: [] });
 
+    if (data.status != HttpStatus.OK) {
 
-      return new ResponseData(HttpStatus.OK, "SUCCESS", data.data.locations.map((x) => ({
+      return new ResponseData(HttpStatus.OK, "SUCCESS", (data.locations || []).map((x: any) => ({
         branch_id: x.id,
         branch_name: x.name,
         branch_address: `${x.address1}, ${x.ward_name}, ${x.district_name}, ${x.province_name}`,
@@ -556,11 +559,12 @@ async function getCNVLBranchList(
       }))
       );
     } else {
-      return new ResponseData(HttpStatus.BAD_REQUEST, data.data.message, []);
+      return new ResponseData(HttpStatus.BAD_REQUEST, data.message || "Error", []);
     }
-  } catch (error) {
-    const statusCode = error.response?.status || HttpStatus.BAD_REQUEST;
-    const message = error.response?.statusText || "Lỗi ! getSHFBillNewList";
+  } catch (error: any) {
+    console.error('[getCNVLBranchList] Error:', error.message);
+    const statusCode = HttpStatus.BAD_REQUEST;
+    const message = error.message || "Lỗi ! getCNVLBranchList";
 
     return new ResponseData(statusCode, message, []);
   }
@@ -587,6 +591,3 @@ function formatPhoneNumber(phone: string): string {
 
   return phone; // Trả về số không thay đổi nếu không có "84" hoặc "+84"
 }
-
-
-

@@ -1,19 +1,33 @@
 import { parentPort, workerData } from "worker_threads";
-import axios from "axios";
 import { ResponseData } from "src/utils.common/utils.response.common/utils.response.common";
 import { HttpStatus } from "@nestjs/common";
 import { FoodChannelTokenValidatorEntity } from "./entity/food-channel-token-validator.entity";
 import { ChannelOrderFoodApiEnum } from "src/utils.common/utils.enum.common/utils.channel-order-food-api.enum";
 import { UtilsBaseFunction } from "src/utils.common/utils.base-function.commom/utils.base-function.comom";
+const { exec } = require("child_process");
+import { promisify } from 'util';
+const execAsync = promisify(exec);
+
+/**
+ * Safe JSON parse với error handling
+ */
+function safeJsonParse<T>(jsonString: string, defaultValue: T): T {
+  try {
+    return JSON.parse(jsonString);
+  } catch (error) {
+    console.error('[safeJsonParse] Failed to parse JSON:', error);
+    return defaultValue;
+  }
+}
 
 async function performTask(channelFoodToken: FoodChannelTokenValidatorEntity): Promise<any> {
 
-  let error :  any[] = [];    
+  let error :  any[] = [];
 
   if(channelFoodToken.channel_order_food_id === 1){
 
     let dataSHF = await getSHFBillNewList(channelFoodToken.access_token, +channelFoodToken.channel_branch_id);
-          
+
     if (dataSHF.status == HttpStatus.UNAUTHORIZED || dataSHF.message == 'Bad Request') {
         error = error.concat([{
                   code : "SHF",
@@ -21,13 +35,13 @@ async function performTask(channelFoodToken: FoodChannelTokenValidatorEntity): P
                   channel_order_food_token_id : channelFoodToken.channel_order_food_token_id
                 }]);
     }
-    
+
   }
 
   if(channelFoodToken.channel_order_food_id === 2){
 
     let dataGRF = await getGRFNewOrderList(channelFoodToken.access_token);
-      if (dataGRF.status == HttpStatus.UNAUTHORIZED) {        
+      if (dataGRF.status == HttpStatus.UNAUTHORIZED) {
         error = error.concat([{
                     code : "GRF",
                     message : "Vui lòng kết nối lại tài khoản " + channelFoodToken.channel_order_food_token_name,
@@ -47,7 +61,7 @@ async function performTask(channelFoodToken: FoodChannelTokenValidatorEntity): P
                         message : "Vui lòng kết nối lại tài khoản " + channelFoodToken.channel_order_food_token_name,
                         channel_order_food_token_id : channelFoodToken.channel_order_food_token_id
                     }]);
-        }  
+        }
     }
 
   return {
@@ -71,57 +85,60 @@ async function getSHFBillNewList(access_token: string, x_foody_entity_id: number
 
       const url : string = ChannelOrderFoodApiEnum.SHF_GET_BILL_LIST;
 
-      const headers = {
-        'x-foody-access-token': access_token,
-        'x-foody-entity-id': x_foody_entity_id,
-        'x-sap-ri': UtilsBaseFunction.createXSapRi(),
-        'user-agent' : ChannelOrderFoodApiEnum.SHF_USER_AGENT,
-        'x-foody-app-type':"1024",
-      };
-
-      const body = {
+      const body = JSON.stringify({
         "order_filter_type": 31,
         "next_item_id": "",
         "request_count": 500000,
         "sort_type": 5
-      }
+      });
 
-      const data = await axios.post(url, JSON.stringify(body), { headers });
-      
-      const orders = data.data.data.orders.map(o => ({
+      const curlCommand = `curl -s -X POST '${url}' \
+        --header 'x-foody-access-token: ${access_token}' \
+        --header 'x-foody-entity-id: ${x_foody_entity_id}' \
+        --header 'x-sap-ri: ${UtilsBaseFunction.createXSapRi()}' \
+        --header 'user-agent: ${ChannelOrderFoodApiEnum.SHF_USER_AGENT}' \
+        --header 'x-foody-app-type: 1024' \
+        --header 'Content-Type: application/json' \
+        --data '${body.replace(/'/g, "'\\''")}'`;
+
+      const result = await execAsync(curlCommand);
+      const data = safeJsonParse(result.stdout, { data: { orders: [] } });
+
+      const orders = (data.data?.orders || []).map((o: any) => ({
         order_id: o.id,
         order_code: o.code,
         total_amount: o.total_value_amount,
-        discount_amount : o.commission.amount,
+        discount_amount : o.commission?.amount || 0,
         order_amount : o.order_value_amount ,
-        customer_order_amount : o.customer_bill.total_amount, 
-        customer_discount_amount : o.customer_bill.total_discount, 
+        customer_order_amount : o.customer_bill?.total_amount || 0,
+        customer_discount_amount : o.customer_bill?.total_discount || 0,
         created_at: o.order_time,
         order_status: o.order_status,
-        driver_name: o.assignee.name,
-        driver_avatar: o.assignee.avatar_url,
+        driver_name: o.assignee?.name || '',
+        driver_avatar: o.assignee?.avatar_url || '',
         foods:
-          o.order_items.map(f => ({
-            food_id: f.dish.id,
-            price: f.dish.original_price,
-            food_price_addition : f.original_price,
-            food_name: f.dish.name,
+          (o.order_items || []).map((f: any) => ({
+            food_id: f.dish?.id || 0,
+            price: f.dish?.original_price || 0,
+            food_price_addition : f.original_price || 0,
+            food_name: f.dish?.name || '',
             quantity: f.quantity,
             note : !f.note ? '' : f.note,
-            options : f.options_groups.flatMap(group =>
-                  group.options.map(option => ({
+            options : (f.options_groups || []).flatMap((group: any) =>
+                  (group.options || []).map((option: any) => ({
                   name: option.name,
                   price : option.original_price,
                   quantity: option.quantity
               })))
           }))
 
-      }));                        
-      
+      }));
+
       return new ResponseData(HttpStatus.OK, "SUCCESS", orders);
-    } catch (error) {      
-      const statusCode = error.response?.status || HttpStatus.BAD_REQUEST;
-      const message = error.response?.statusText || "Lỗi ! getSHFBillNewList";
+    } catch (error: any) {
+      console.error('[getSHFBillNewList] Error:', error.message);
+      const statusCode = HttpStatus.BAD_REQUEST;
+      const message = error.message || "Lỗi ! getSHFBillNewList";
 
       return new ResponseData(statusCode, message, []);
 
@@ -138,28 +155,28 @@ async function getGRFNewOrderList(access_token: string): Promise<any> {
 
       const url : string = ChannelOrderFoodApiEnum.GRF_GET_NEW_ORDER_LIST;
 
-      const headers = {
-        'Authorization': access_token
-      };
+      const curlCommand = `curl -s -X GET '${url}' \
+        --header 'Authorization: ${access_token}'`;
 
-      const data = await axios.get(url, { headers });      
+      const result = await execAsync(curlCommand);
+      const data = safeJsonParse(result.stdout, { orders: [] });
 
-      const orders = data.data.orders
-      .map(o => ({
+      const orders = (data.orders || [])
+      .map((o: any) => ({
         order_id: o.orderID,
-        order_amount: parseFloat(o.orderValue.replace(/\./g, '')),
+        order_amount: parseFloat((o.orderValue || '0').replace(/\./g, '')),
         status_string: o.state,
-        created_at: o.times.createdAt.replace('T', ' ').replace('Z', ''),
-        driver_name : o.driver.name,
-        driver_avatar : o.driver.avatar,
+        created_at: (o.times?.createdAt || '').replace('T', ' ').replace('Z', ''),
+        driver_name : o.driver?.name || '',
+        driver_avatar : o.driver?.avatar || '',
         display_id : o.displayID
-      }));      
+      }));
 
       return new ResponseData(HttpStatus.OK, "SUCCESS", orders);
-    } catch (error) {
-
-      const statusCode = error.response?.status || HttpStatus.BAD_REQUEST;
-      const message = error.response?.statusText || "Lỗi ! getSHFBillNewList";
+    } catch (error: any) {
+      console.error('[getGRFNewOrderList] Error:', error.message);
+      const statusCode = HttpStatus.BAD_REQUEST;
+      const message = error.message || "Lỗi ! getGRFNewOrderList";
 
       return new ResponseData(statusCode, message, []);
     }
@@ -173,25 +190,25 @@ async function getGRFNewOrderList(access_token: string): Promise<any> {
 
       const url : string = ChannelOrderFoodApiEnum.BEF_GET_BILL_LIST;
 
-
-      const headers = {
-        'Content-Type': 'application/json',
-      };
-
-      const body = {
+      const body = JSON.stringify({
         access_token: access_token,
         restaurant_id: +channel_branch_id,
         merchant_id: +merchant_id,
         fetch_type: "in_progress"
-      };
-  
-      const data = await axios.post(url, JSON.stringify(body), { headers });      
+      });
 
-      if (data.data.code == 143) {
+      const curlCommand = `curl -s -X POST '${url}' \
+        --header 'Content-Type: application/json' \
+        --data '${body.replace(/'/g, "'\\''")}'`;
+
+      const result = await execAsync(curlCommand);
+      const data = safeJsonParse(result.stdout, { code: 0 });
+
+      if (data.code == 143) {
 
         const moment = require('moment');
 
-        const bills = data.data.restaurant_orders.map(item => ({
+        const bills = (data.restaurant_orders || []).map((item: any) => ({
           order_id: item.order_id,
           order_amount: item.order_amount,
           driver_name: item.driver_name,
@@ -202,13 +219,14 @@ async function getGRFNewOrderList(access_token: string): Promise<any> {
         return new ResponseData(HttpStatus.OK, "SUCCESS", bills);
 
       } else {
-        return new ResponseData(HttpStatus.BAD_REQUEST, data.data.message, []);
+        return new ResponseData(HttpStatus.BAD_REQUEST, data.message || "Error", []);
       }
 
     }
-    catch (error) {
-      const statusCode = error.response?.status || HttpStatus.BAD_REQUEST;
-      const message = error.response?.statusText || "Lỗi ! getSHFBillNewList";
+    catch (error: any) {
+      console.error('[getBEFBillListNew] Error:', error.message);
+      const statusCode = HttpStatus.BAD_REQUEST;
+      const message = error.message || "Lỗi ! getBEFBillListNew";
 
       return new ResponseData(statusCode, message, []);
 
