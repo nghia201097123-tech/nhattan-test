@@ -1,0 +1,62 @@
+syntax = "proto3";
+
+package vn.techres.microservice.grpc.nodejs_food_channel_processor.branch_channel_food_commission_percent_map;
+
+service SettingCommissionService {
+  rpc updateSettingCommissionPercent(SettingCommissionPercentDTO) returns (BaseResponse);
+  rpc getListCommissionPercentSettingV2(GetListCommissionPercentSettingV2DTO) returns (ListV2BaseResponse);
+
+}
+
+message BaseResponse {
+  int32 status = 1;
+  string message = 2;
+  BranchChannelFoodCommissionPercentMap data = 3;
+}
+
+message SettingCommissionPercentDTO {
+  int32 id = 1;
+  int32 restaurant_id = 2;
+  int32 restaurant_brand_id = 3;
+  int32 branch_id = 4;
+  int32 channel_order_food_id = 5;
+  int32 percent = 6;
+  int32 channel_order_food_token_id = 7;
+
+}
+
+message BranchChannelFoodCommissionPercentMap {
+  int32 id = 1;
+  int32 restaurant_id = 2; 
+  int32 restaurant_brand_id = 3; 
+  int32 branch_id = 4;
+  int32 channel_order_food_id = 5;
+  int32 channel_order_food_token_id = 6;
+  string channel_branch_id = 7;
+  int32 percent = 8; 
+}
+
+// ---------- getListCommissionPercentSettingV2 ---------------
+ message GetListCommissionPercentSettingV2DTO {
+  int32 restaurant_id = 1; 
+  int32 restaurant_brand_id = 2;       
+  int32 branch_id = 3; 
+  int32 channel_order_food_id = 4;    
+  int32 channel_order_food_token_id = 5;    
+}
+
+
+message CommissionPercentSettingV2DataResponse {
+  int32 id = 1;                         
+  int32 channel_order_food_id = 2;     
+  int32 channel_order_food_token_id = 3;  
+  string channel_order_food_token_name = 4;  
+  int32 percent = 5;       
+  string username = 6;           
+}
+
+message ListV2BaseResponse {
+  int32 status = 1;
+  string message = 2;
+  repeated CommissionPercentSettingV2DataResponse data = 3;
+}

@@ -1,0 +1,61 @@
+syntax = "proto3";
+
+package vn.techres.microservice.grpc.nodejs_food_channel_connector.sync_connector_channel_order;
+
+
+service SyncConnectorChannelOrderService {
+  rpc syncChannelOrderShf (SyncChannelOrderShfRequest) returns (EmptyBaseResponse) {} ; 
+  rpc syncChannelOrderGrf (SyncChannelOrderGrfRequest) returns (EmptyBaseResponse) {} ; 
+  rpc syncChannelOrderBef (SyncChannelOrderBefRequest) returns (EmptyBaseResponse) {} ;
+
+  rpc healthCheckShf(HealthCheckRequest) returns (HealthCheckGRPCResponse) {}  
+  rpc healthCheckGrf(HealthCheckRequest) returns (HealthCheckGRPCResponse) {}  
+  rpc healthCheckBef(HealthCheckRequest) returns (HealthCheckGRPCResponse) {}  
+
+}
+
+message EmptyBaseResponse {
+  int32 status = 1;
+  string message = 2;
+  Empty data = 3;
+}
+
+message Empty {
+}
+
+
+// ---------------------- syncChannelOrderShf ------------------------
+
+message SyncChannelOrderShfRequest {
+  int32 restaurant_id = 1;      
+  int32 restaurant_brand_id = 2;       
+  int32 branch_id = 3; 
+  string tokens = 4; 
+}
+
+// ---------------------- syncChannelOrderGrf ------------------------
+
+message SyncChannelOrderGrfRequest {
+  int32 restaurant_id = 1;      
+  int32 restaurant_brand_id = 2;       
+  int32 branch_id = 3; 
+  string tokens = 4; 
+}
+
+// ---------------------- syncChannelOrderBef ------------------------
+
+message SyncChannelOrderBefRequest {
+  int32 restaurant_id = 1;      
+  int32 restaurant_brand_id = 2;       
+  int32 branch_id = 3; 
+  string tokens = 4; 
+}
+
+message HealthCheckRequest {
+}
+
+message HealthCheckGRPCResponse {
+    int32 status = 1;
+    string message = 2;
+    string data = 3;
+}

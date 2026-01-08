@@ -1,0 +1,148 @@
+syntax = "proto3";
+
+package vn.techres.microservice.grpc.nodejs_order_channel_order_food;
+
+service OrderChannelOrderFoodService {
+    rpc getListOrder (GetListOrderRequest) returns (ResultOrderResponse);
+    rpc getOrderDetails (GetOrderDetailRequest) returns (ResultOrderDetailResponse);
+    rpc updateOrder (updateOrderRequest) returns (BaseResponse);
+    rpc getDetailBillAppFood(GetDetailBillAppFoodRequest) returns (BillAppFoodBaseResponse) {};
+    rpc getListChannelOrder (GetListChannelOrderRequest) returns (ResultChannelOrderResponse) {};
+    rpc updateOrderV2  (UpdateOrderRequestV2) returns (BaseResponse);
+
+}
+
+message GetListOrderRequest{
+    int32 restaurant_id = 1;
+    int32 restaurant_brand_id = 2;
+    int32 channel_order_food_id = 3;
+    string channel_branch_ids = 4;
+    string key_search = 5;
+    int32 limit = 6;
+    int32 page = 7;
+    int32 is_have_restaurant_order = 8;
+}
+
+message OrderResponse {
+    int32 id = 1;
+    string order_id =2;
+    int32 channel_order_food_id =3;
+    string channel_branch_id = 4;
+    string total_amount = 5;
+    string driver_name = 6;
+    string driver_avatar = 7;
+    string channel_order_food_name = 8;
+    string channel_order_food_code = 9;
+    repeated OrderDetailResponse details = 10;
+    string display_id = 11;
+    string discount_amount = 12;
+    int64 restaurant_order_id = 13;
+    string customer_order_amount = 14;
+    string customer_discount_amount = 15;
+    string order_amount = 16;
+    string driver_phone = 17;
+    string customer_name = 18;
+    string phone = 19;
+    string address = 20;
+    string shipping_fee = 21;
+    string create_at = 22;
+    string channel_branch_name = 23;
+    string channel_branch_address = 24;
+    string channel_branch_phone = 25;
+    string note = 26;
+    string item_discount_amount = 27;
+    int32 is_scheduled_order = 28;
+    string deliver_time = 29;
+
+}
+
+message ListOrderResponse {
+    int32 limit = 1 ;
+    int32 total_record = 2 ;
+    repeated OrderResponse  list = 3;
+
+}
+
+message ResultOrderResponse {
+  int32 status = 1;
+  string message = 2;
+  ListOrderResponse data = 3;
+}
+
+message GetOrderDetailRequest{
+    int32 channel_order_id = 1;
+    int32 channel_order_food_id = 2;
+    string order_id = 3;
+}
+
+message OrderDetailResponse {
+    int32 id = 1;
+    int32 channel_order_id = 2;
+    string order_id = 3;
+    int32 channel_order_food_id = 4;
+    string food_id = 5;
+    string food_name = 6;
+    int32 quantity = 7;
+    string food_price = 8;
+    string food_note = 9;
+    string food_options = 10;
+    string food_price_addition = 11;
+}
+
+message ResultOrderDetailResponse {
+  int32 status = 1;
+  string message = 2;
+  OrderResponse data = 3;
+}
+
+message updateOrderRequest{
+    int32 channel_order_id = 1;
+    int64 restaurant_order_id = 2;
+}
+
+message Empty {} 
+
+message BaseResponse {
+  int32 status = 1;
+  string message = 2;
+  Empty data = 3;
+}
+
+message GetDetailBillAppFoodRequest {
+  int32 channel_order_food_id = 1;
+  string channel_order_food_code = 2;
+}
+
+message BillAppFoodBaseResponse {
+  int32 status = 1;
+  string message = 2;
+  repeated DetailBillAppFoodResponse data = 3; 
+}
+
+message  DetailBillAppFoodResponse {
+  string food_id = 1;
+  string food_name = 2;
+  string food_note = 3;
+}
+
+//----------------- rpc getListChannelOrder -----------------
+
+
+message GetListChannelOrderRequest{
+    int32 restaurant_id = 1;
+    string channel_order_ids = 2;
+}
+
+message ResultChannelOrderResponse {
+  int32 status = 1;
+  string message = 2;
+  repeated OrderResponse data = 3;
+}
+
+//----------------- rpc updateOrderV2 -----------------
+
+
+message UpdateOrderRequestV2{
+    int32 restaurant_id = 1; 
+    string channel_order_update_json = 2;
+}

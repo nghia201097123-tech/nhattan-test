@@ -1,0 +1,248 @@
+syntax = "proto3";
+
+package vn.techres.microservice.grpc.nodejs_channel_order_food;
+
+
+service ChannelOrderFoodService {
+  rpc findById (ChannelOrderFoodByIdRequest) returns (BaseResponse);
+  rpc getFoodsChannelOrderFood (GetFoodsChannelOrderFoodRequest) returns (ListFoodChannelOrderFoodResponse);
+  rpc updateFoodPrices (UpdateFoodPricesChannelOrderFoodRequest) returns (BaseEmptyResponse);
+  rpc getBranchesChannelOrderFood (GetBranchsChannelOrderFoodRequest) returns (ListBranchChannelOrderFoodResponse);
+  rpc syncAssignBranch (AssignChannelBranchRequest) returns (BaseEmptyResponse);
+  rpc getDetailBillAppFood(GetDetailBillAppFoodRequest) returns (BillAppFoodBaseResponse) {};
+  rpc getList(ChannelOrderFoodRequest) returns (ListBaseResponse);
+  rpc orderRefresh(OrderRefreshRequest) returns (BaseEmptyResponse);
+  rpc syncAssignMultipleChannelBranch (AssignMultipleChannelBranchRequest) returns (BaseEmptyResponse);
+  rpc getChannelBranchesOfTokenToConnection (GetChannelBranchesOfTokenToConnectionRequest) returns (ListChannelBranchesOfTokenToConnectionResponse);
+  rpc getFoodToppings(GetFoodToppingRequest) returns (ListFoodToppingResponse);
+  rpc comfirmChannelOrder(ComfirmChannelOrderRequest) returns (BaseEmptyResponse) {};
+  rpc syncBranches(SyncChannelBranchRequest) returns (ListChannelBranchesOfTokenToConnectionResponse);
+  rpc deleteRedisFoodChannelFoodTechresMap(DeleteRedisFoodChannelFoodTechresMapRequest) returns (BaseEmptyResponse);
+}
+
+message ChannelOrderFoodByIdRequest {
+  int32 id = 1;
+}
+
+message ChannelOrderFoodResponse {
+  int32 id = 1;
+  string name = 2;
+  string code = 3; 
+  string image_url = 4;
+  int32 status = 5;
+}
+
+message BaseResponse {
+  int32 status = 1;
+  string message = 2;
+  ChannelOrderFoodResponse data = 3;
+}
+
+message GetFoodsChannelOrderFoodRequest{
+  int32 restaurant_id = 1;
+  int32 restaurant_brand_id = 2;
+  int32 channel_order_food_id = 3 ;
+  string channel_branch_id = 4 ;
+}
+
+message FoodChannelOrderFoodResponse {
+  string id = 1;
+  string name = 2;
+  string price = 3;
+  string picture_url = 4;
+  string description = 5;
+  int32  is_pending = 6;
+}
+
+message ListFoodChannelOrderFoodResponse {
+  int32 status = 1;
+  string message = 2;
+  repeated FoodChannelOrderFoodResponse data = 3;
+}
+
+message UpdateFoodPricesChannelOrderFoodRequest{
+  int32 restaurant_id = 1;
+  int32 restaurant_brand_id = 2;
+  int32 channel_order_food_id = 3;
+  string channel_branch_id = 4 ;
+  repeated UpdateFoodPriceRequest foods = 5;
+}
+
+message UpdateFoodPriceRequest {
+  string id = 1;
+  string price = 2;
+}
+
+message Empty {
+}
+
+message BaseEmptyResponse {
+  int32 status = 1;
+  string message = 2;
+  Empty data = 3;
+}
+
+message GetBranchsChannelOrderFoodRequest{
+  int32 restaurant_id = 1;
+  int32 restaurant_brand_id = 2;
+  int32 channel_order_food_id = 3;
+}
+
+message BranchChannelOrderFoodResponse {
+  string branch_id = 1;
+  string branch_name = 2;
+}
+
+message ListBranchChannelOrderFoodResponse {
+  int32 status = 1;
+  string message = 2;
+  repeated BranchChannelOrderFoodResponse data = 3;
+}
+
+
+
+message AssignChannelBranchRequest {
+  int32 restaurant_id = 1;
+  int32 restaurant_brand_id = 2;
+  int32 channel_order_food_id = 3 ;
+  string branch_maps = 4;
+}
+
+message GetDetailBillAppFoodRequest {
+  int32 channel_order_food_id = 1;
+  string channel_order_food_code = 2;
+}
+
+message BillAppFoodBaseResponse {
+  int32 status = 1;
+  string message = 2;
+  repeated DetailBillAppFoodResponse data = 3; 
+}
+
+message  DetailBillAppFoodResponse {
+  string food_id = 1;
+  string food_name = 2;
+  string food_note = 3;
+}
+
+// --------- GetList --------------
+message ChannelOrderFoodRequest{
+  int32 restaurant_id = 1;        
+  int32 restaurant_brand_id = 2;        
+  int32 channel_order_food_id = 3;      
+  int32 is_connect = 4;                
+  string key_search = 5;              
+}
+
+message ListBaseResponse {
+  int32 status = 1;
+  string message = 2;
+  repeated ChannelOrderFood data = 3;
+
+}
+
+message ChannelOrderFood {
+  int32 id = 1;                                        
+  string name = 2;                                      
+  string code = 3;                                     
+  string image_url = 4;                                 
+  int32 status = 5;                                    
+  int32 restaurant_brand_channel_order_food_map_id = 6; 
+  int32 is_connect = 7;  
+  int32 channel_order_food_token_id = 8;
+}
+
+// ---------------------------
+// ---------- orderRefresh ---------------
+
+message OrderRefreshRequest{
+  int32 restaurant_id = 1;        
+  int32 restaurant_brand_id = 2;        
+  int32 branch_id = 3;      
+  string channel_orders = 4;     
+}
+
+
+// ---------- syncAssignMultipleChannelBranch -----------------
+
+message AssignMultipleChannelBranchRequest {
+  int32 restaurant_id = 1;
+  int32 restaurant_brand_id = 2;
+  int32 branch_id = 3;
+  int32 channel_order_food_id = 4;
+  string branch_maps = 5;
+}
+// ---------- getChannelBranchesOfTokenToConnection -----------------
+
+message GetChannelBranchesOfTokenToConnectionRequest{
+  int32 restaurant_id = 1;
+  int32 restaurant_brand_id = 2;
+  int32 branch_id = 3;
+  int32 channel_order_food_id = 4;
+}
+
+message ChannelBranchesOfTokenToConnectionResponse {
+  string branch_id = 1;
+  string branch_name = 2;
+  int32 channel_order_food_token_id = 3;
+  string channel_order_food_token_name = 4;
+  string branch_address = 5;
+  string branch_phone = 6;
+
+}
+
+message ListChannelBranchesOfTokenToConnectionResponse {
+  int32 status = 1;
+  string message = 2;
+  repeated ChannelBranchesOfTokenToConnectionResponse data = 3;
+}
+
+// ---------- getFoodToppings -----------------
+
+message GetFoodToppingRequest{
+  int32 restaurant_id = 1;
+  int32 restaurant_brand_id = 2;
+  int32 channel_order_food_id = 3 ;
+  string channel_branch_id = 4 ;
+}
+
+message GroupFoodToppingResponse {
+  string id = 1;
+  string name = 2;
+  repeated FoodToppingResponse list = 3;
+}
+
+message FoodToppingResponse {
+  string id = 1;
+  string name = 2;
+  string price = 3;
+}
+
+message ListFoodToppingResponse {
+  int32 status = 1;
+  string message = 2;
+  repeated GroupFoodToppingResponse data = 3;
+}
+
+// ---------- comfirmChannelOrder -----------------
+
+message ComfirmChannelOrderRequest{
+  int32 restaurant_id = 1;
+  int32 channel_order_id = 2;
+}
+
+// ---------- syncBranches -----------------
+
+message SyncChannelBranchRequest {
+  int32 restaurant_id = 1;
+  int32 restaurant_brand_id = 2;
+  int32 channel_order_food_id = 3;
+}
+
+// ---------- deleteRedisFoodChannelFoodTechresMap -----------------
+message DeleteRedisFoodChannelFoodTechresMapRequest {
+  int32 restaurant_id = 1;
+  int32 restaurant_brand_id = 2;
+  int32 branch_id = 3;
+  int32 channel_order_food_id = 4;
+}

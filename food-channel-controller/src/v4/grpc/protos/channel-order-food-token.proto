@@ -1,0 +1,96 @@
+syntax = "proto3";
+
+package vn.techres.microservice.grpc.nodejs_food_channel_processor.channel_order_food_token;
+
+service ChannelOrderFoodTokenService {
+    rpc createToken (CreateChannelOrderFoodTokenRequest) returns (BaseResponse) {} ; 
+    rpc updateToken (UpdateChannelOrderFoodTokenRequest) returns (BaseResponse) {} ; 
+    rpc findByIdToken (FindByIdTokenRequest) returns (BaseResponse) {} ; 
+    rpc changeConnection (ChangeConnectionTokenRequest) returns (BaseResponse) {} ;
+    rpc getList (GetListTokenRequest) returns (BaseListResponse) {} ;
+}
+ 
+
+//-------------- createToken ------------
+
+message CreateChannelOrderFoodTokenRequest {
+  int32 restaurant_id = 1;
+  int32 restaurant_brand_id = 2;
+  int32 channel_order_food_id = 3;
+  string access_token = 4;
+  string username = 5;
+  string password = 6;
+  string x_merchant_token = 7;
+  string device_id = 8;
+  string device_brand = 9;
+  int32 quantity_account = 10;
+}
+
+message ChannelOrderFoodToken {
+  int32 id = 1;
+  int32 restaurant_id = 2;
+  int32 restaurant_brand_id = 3;
+  int32 channel_order_food_id = 4;
+  string access_token = 5;
+  string username = 6;
+  string password = 7;
+  int32 x_foody_entity_id = 8;
+  string x_merchant_token = 9;
+  string device_id = 10;
+  string device_brand = 11;
+  string uuid = 12;
+  string menu_group_id = 13;
+  string name = 14;
+  int32 is_connection = 15;
+
+}
+
+message BaseResponse {
+    int32 status = 1;
+    string message = 2;
+    ChannelOrderFoodToken data = 3;
+}
+
+message BaseListResponse {
+    int32 status = 1;
+    string message = 2;
+    repeated ChannelOrderFoodToken data = 3;
+}
+
+//-------------- updateToken ------------
+
+message UpdateChannelOrderFoodTokenRequest {
+  int32 id = 1;
+  string access_token = 2;
+  string username = 3;
+  string password = 4;
+  string x_merchant_token = 5;
+  string device_id = 6;
+  string device_brand = 7;
+  int32 restaurant_id = 8;
+}
+
+//-------------- findByIdToken ------------
+
+message FindByIdTokenRequest {
+  int32 id = 1;
+}
+
+//-------------- changeConnection ------------
+
+message ChangeConnectionTokenRequest {
+  int32 id = 1;
+  int32 quantity_account = 2;
+
+}
+
+//-------------- getList ------------
+
+message GetListTokenRequest {
+  int32 restaurant_id = 1;
+  int32 restaurant_brand_id = 2;
+  int32 channel_order_food_id = 3;
+  int32 channel_order_food_token_id = 4;
+  int32 is_connection = 5;
+
+}

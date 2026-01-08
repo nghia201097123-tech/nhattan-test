@@ -1,0 +1,18 @@
+import { SetMetadata } from "@nestjs/common/decorators";
+
+export enum Role {
+  REPORT_OVERVIEW = 'REPORT_OVERVIEW',
+  REPORT_CUSTOMER = 'REPORT_CUSTOMER',
+  REPORT_BUSINESS = 'REPORT_BUSINESS',
+  TREASURE_REPORT= 'TREASURE_REPORT',
+  RESTAURANT_MANAGER='RESTAURANT_MANAGER',
+  VIEW_ALL='VIEW_ALL',
+  CHEF_REPORT='CHEF_REPORT',
+  CASHIER_ACCESS='CASHIER_ACCESS', 
+  CHEF_COOK_ACCESS='CHEF_COOK_ACCESS',
+  BAR_ACCESS='BAR_ACCESS'
+  }
+
+  
+export const ROLES_KEY = 'roles';
+export const Roles = (...roles: Role[]) => SetMetadata(ROLES_KEY, roles);

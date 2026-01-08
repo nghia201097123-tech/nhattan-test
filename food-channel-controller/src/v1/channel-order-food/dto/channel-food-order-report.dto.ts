@@ -1,0 +1,100 @@
+import { ApiProperty } from "@nestjs/swagger";
+import { Type } from "class-transformer";
+import { Min } from "class-validator";
+import { IsInReportType, IsNotNull } from "src/utils.common/utils.decorator.common/utils.decorator.common";
+import { ReportTypeEnum } from "src/utils.common/utils.enum/utils.report-type.enum";
+import { UtilsBaseExceptionLangValidator } from "src/utils.common/utils.exception.lang.common/utils.base.exception.lang.validator";
+
+export class ChannelFoodOrderReportDto {
+  @ApiProperty({
+    required: true,
+    default: 1,
+    example: 1,
+    description:
+      UtilsBaseExceptionLangValidator.exceptionStringRestaurantBrand(),
+  })
+  @Type(() => Number)
+  @Min(1)
+  readonly restaurant_brand_id: number;
+
+  @ApiProperty({
+    required: true,
+    default: 1,
+    example: 1,
+    description: UtilsBaseExceptionLangValidator.exceptionStringBranch(),
+  })
+  @Type(() => Number)
+  readonly branch_id: number;
+
+  @ApiProperty({
+    required: true,
+    default: 1,
+    example: 1,
+    description: "Id nền tảng app food",
+  })
+  @Type(() => Number)
+  readonly channel_order_food_id: number;
+
+  @ApiProperty({
+    required: false,
+    example: "",
+    description: UtilsBaseExceptionLangValidator.exceptionStringDate(),
+  })
+  readonly date_string: string;
+
+  @ApiProperty({
+    required: false,
+    example: "",
+    description: UtilsBaseExceptionLangValidator.exceptionStringFromDate(),
+  })
+  readonly from_date: string;
+
+  @ApiProperty({
+    required: false,
+    example: "",
+    description: UtilsBaseExceptionLangValidator.exceptionStringToDate(),
+  })
+  readonly to_date: string;
+
+  @ApiProperty({
+    required: false,
+    example: "",
+    description: UtilsBaseExceptionLangValidator.exceptionStringReportType(),
+  })
+  @Type(() => Number)
+  @IsInReportType()
+  readonly report_type: number = ReportTypeEnum.DEFAULT;
+
+  @ApiProperty({
+    required: false,
+    example: 0,
+    description: "Giờ báo cáo của thương hiệu",
+  })
+  @Type(() => Number)
+  readonly hour_to_take_report: number = 0;
+
+  @ApiProperty({
+    required: false,
+    example: "",
+    description: UtilsBaseExceptionLangValidator.exceptionStringKeySearch(),
+  })
+  @IsNotNull()
+  readonly key_search: string = '';
+
+  @ApiProperty({
+    required: false,
+    example: 0,
+    description: UtilsBaseExceptionLangValidator.exceptionStringLimit(),
+  })
+  @Type(() => Number)
+  readonly limit: number = 20;
+
+  @ApiProperty({
+    required: false,
+    example: 0,
+    description: UtilsBaseExceptionLangValidator.exceptionStringPage(),
+  })
+  @Type(() => Number)
+  readonly page: number = 0;
+
+}
