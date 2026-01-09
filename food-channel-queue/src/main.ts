@@ -38,11 +38,18 @@ async function bootstrap() {
     let moment = require('moment-timezone');
     console.log(moment().tz("Asia/Ho_Chi_Minh").format());
 
-    if (["local","beta", "staging"].includes(process.env.CONFIG_ENV_MODE)) {
+    // Log only non-sensitive configuration in development
+    if (["local", "beta", "staging"].includes(process.env.CONFIG_ENV_MODE)) {
+      const sensitiveKeys = ['PASSWORD', 'SECRET', 'TOKEN', 'KEY', 'CREDENTIAL'];
+      console.log('=== Application Configuration (non-sensitive) ===');
       for (const k in envConfig) {
-      console.log(`${k}=${envConfig[k]}`);
-    }
-  } 
+        const isSensitive = sensitiveKeys.some(sk => k.toUpperCase().includes(sk));
+        if (!isSensitive) {
+          console.log(`${k}=${envConfig[k]}`);
+        }
+      }
+      console.log('=================================================');
+    } 
   
 }
 bootstrap();
