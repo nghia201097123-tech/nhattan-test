@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useStore } from '../context/StoreContext';
 import { useCart } from '../context/CartContext';
+import UserMenu from './UserMenu';
 
 const Header = () => {
   const { storeInfo } = useStore();
@@ -64,6 +65,7 @@ const Header = () => {
               <span>🛒</span>
               <span>Đặt hàng</span>
             </a>
+            <UserMenu />
           </nav>
 
           {/* Mobile Cart & Menu Buttons */}

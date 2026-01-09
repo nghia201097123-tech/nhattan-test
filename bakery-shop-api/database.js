@@ -69,6 +69,30 @@ db.exec(`
     note TEXT,
     FOREIGN KEY (order_id) REFERENCES orders(id)
   );
+
+  CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    email TEXT UNIQUE NOT NULL,
+    password_hash TEXT,
+    name TEXT NOT NULL,
+    phone TEXT,
+    role TEXT DEFAULT 'customer' CHECK (role IN ('admin', 'customer')),
+    provider TEXT DEFAULT 'local' CHECK (provider IN ('local', 'google', 'facebook')),
+    provider_id TEXT,
+    avatar TEXT,
+    is_active INTEGER DEFAULT 1,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE IF NOT EXISTS refresh_tokens (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    token TEXT UNIQUE NOT NULL,
+    expires_at DATETIME NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  );
 `);
 
 // Seed default categories if empty
@@ -134,6 +158,18 @@ if (productCount.count === 0) {
 
   products.forEach(p => insertProduct.run(...p));
   console.log('Seeded products');
+}
+
+// Seed default admin user if no admin exists
+const adminCount = db.prepare("SELECT COUNT(*) as count FROM users WHERE role = 'admin'").get();
+if (adminCount.count === 0) {
+  // Default admin password: admin123 (bcrypt hash)
+  const bcryptHash = '$2a$10$8K6EiWVpD4M.xQlKqwvjR.pT7WjGqXvJcH/Qn3PYGNdLX1dJC3Tqy';
+  db.prepare(`
+    INSERT INTO users (email, password_hash, name, role, provider)
+    VALUES (?, ?, ?, ?, ?)
+  `).run('admin@bakery.com', bcryptHash, 'Admin', 'admin', 'local');
+  console.log('Seeded admin user (email: admin@bakery.com, password: admin123)');
 }
 
 module.exports = db;
