@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { storeInfo } from '../data/storeInfo';
+import { useStore } from '../context/StoreContext';
 
 const Header = () => {
+  const { storeInfo } = useStore();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const navLinks = [

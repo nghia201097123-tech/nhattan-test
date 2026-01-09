@@ -1,6 +1,7 @@
-import { storeInfo } from '../data/storeInfo';
+import { useStore } from '../context/StoreContext';
 
 const Footer = () => {
+  const { storeInfo } = useStore();
   const currentYear = new Date().getFullYear();
 
   return (

@@ -1,6 +1,7 @@
-import { storeInfo } from '../data/storeInfo';
+import { useStore } from '../context/StoreContext';
 
 const About = () => {
+  const { storeInfo } = useStore();
   const features = [
     {
       icon: '🌿',

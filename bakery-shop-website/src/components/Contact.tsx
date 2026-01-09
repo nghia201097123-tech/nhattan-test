@@ -1,6 +1,7 @@
-import { storeInfo } from '../data/storeInfo';
+import { useStore } from '../context/StoreContext';
 
 const Contact = () => {
+  const { storeInfo } = useStore();
   return (
     <section id="contact" className="py-20 bg-white relative overflow-hidden">
       {/* Decorative clouds */}

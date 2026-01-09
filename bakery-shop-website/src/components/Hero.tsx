@@ -1,6 +1,7 @@
-import { storeInfo } from '../data/storeInfo';
+import { useStore } from '../context/StoreContext';
 
 const Hero = () => {
+  const { storeInfo } = useStore();
   return (
     <section
       id="home"

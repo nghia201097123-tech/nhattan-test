@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { products, categories } from '../data/products';
+import { useStore } from '../context/StoreContext';
 import type { Product } from '../types';
 
 const formatPrice = (price: number) => {
@@ -58,6 +58,7 @@ const ProductCard = ({ product }: { product: Product }) => {
 };
 
 const Products = () => {
+  const { products, categories } = useStore();
   const [activeCategory, setActiveCategory] = useState('all');
 
   const filteredProducts = activeCategory === 'all'
