@@ -3,6 +3,7 @@ import { NavLink, Outlet } from 'react-router-dom';
 const AdminLayout = () => {
   const navItems = [
     { path: '/admin', label: 'Dashboard', icon: '📊', end: true },
+    { path: '/admin/orders', label: 'Đơn hàng', icon: '📋' },
     { path: '/admin/products', label: 'Sản phẩm', icon: '🍰' },
     { path: '/admin/store-info', label: 'Thông tin cửa hàng', icon: '🏪' },
   ];

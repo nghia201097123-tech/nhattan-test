@@ -23,9 +23,9 @@ const Dashboard = () => {
   };
 
   const statCards = stats ? [
-    { label: 'Tổng sản phẩm', value: stats.totalProducts, icon: '📦', color: 'bg-sky-500' },
-    { label: 'Đang hoạt động', value: stats.activeProducts, icon: '✅', color: 'bg-emerald-500' },
-    { label: 'Danh mục', value: stats.categories, icon: '📂', color: 'bg-amber-500' },
+    { label: 'Tổng đơn hàng', value: (stats as any).totalOrders || 0, icon: '📋', color: 'bg-sky-500' },
+    { label: 'Chờ xử lý', value: (stats as any).pendingOrders || 0, icon: '⏳', color: 'bg-amber-500' },
+    { label: 'Tổng sản phẩm', value: stats.totalProducts, icon: '📦', color: 'bg-emerald-500' },
     { label: 'Bán chạy', value: stats.bestSellers, icon: '⭐', color: 'bg-rose-500' },
   ] : [];
 
@@ -62,10 +62,21 @@ const Dashboard = () => {
           {/* Quick Actions */}
           <div className="bg-white p-6 rounded-2xl shadow-sm">
             <h2 className="text-xl font-bold text-slate-800 mb-4">Thao tác nhanh</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <Link
+                to="/admin/orders"
+                className="flex items-center gap-4 p-4 bg-sky-50 rounded-xl hover:bg-sky-100 transition-colors"
+              >
+                <span className="text-3xl">📋</span>
+                <div>
+                  <p className="font-semibold text-slate-800">Quản lý đơn hàng</p>
+                  <p className="text-sm text-slate-500">Xem và xử lý đơn hàng</p>
+                </div>
+              </Link>
+
               <Link
                 to="/admin/products"
-                className="flex items-center gap-4 p-4 bg-sky-50 rounded-xl hover:bg-sky-100 transition-colors"
+                className="flex items-center gap-4 p-4 bg-amber-50 rounded-xl hover:bg-amber-100 transition-colors"
               >
                 <span className="text-3xl">🍰</span>
                 <div>
@@ -76,7 +87,7 @@ const Dashboard = () => {
 
               <Link
                 to="/admin/store-info"
-                className="flex items-center gap-4 p-4 bg-amber-50 rounded-xl hover:bg-amber-100 transition-colors"
+                className="flex items-center gap-4 p-4 bg-purple-50 rounded-xl hover:bg-purple-100 transition-colors"
               >
                 <span className="text-3xl">🏪</span>
                 <div>

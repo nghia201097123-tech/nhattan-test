@@ -195,13 +195,139 @@ app.get('/api/stats', (req, res) => {
     const activeProducts = db.prepare('SELECT COUNT(*) as count FROM products WHERE is_active = 1').get().count;
     const categories = db.prepare('SELECT COUNT(*) as count FROM categories').get().count;
     const bestSellers = db.prepare('SELECT COUNT(*) as count FROM products WHERE is_best_seller = 1').get().count;
+    const totalOrders = db.prepare('SELECT COUNT(*) as count FROM orders').get().count;
+    const pendingOrders = db.prepare("SELECT COUNT(*) as count FROM orders WHERE status = 'pending'").get().count;
 
     res.json({
       totalProducts,
       activeProducts,
       categories,
       bestSellers,
+      totalOrders,
+      pendingOrders,
     });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============== ORDERS API ==============
+
+// Generate order code
+const generateOrderCode = () => {
+  const date = new Date();
+  const prefix = 'SD';
+  const timestamp = date.getFullYear().toString().slice(-2) +
+    String(date.getMonth() + 1).padStart(2, '0') +
+    String(date.getDate()).padStart(2, '0');
+  const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+  return `${prefix}${timestamp}${random}`;
+};
+
+// Create order
+app.post('/api/orders', (req, res) => {
+  try {
+    const { customerName, phone, email, address, deliveryDate, deliveryTime, paymentMethod, note, items, totalPrice } = req.body;
+
+    // Generate unique order code
+    let orderCode = generateOrderCode();
+
+    // Insert order
+    const result = db.prepare(`
+      INSERT INTO orders (order_code, customer_name, phone, email, address, delivery_date, delivery_time, payment_method, note, total_price)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(orderCode, customerName, phone, email || '', address, deliveryDate, deliveryTime, paymentMethod, note || '', totalPrice);
+
+    const orderId = result.lastInsertRowid;
+
+    // Insert order items
+    const insertItem = db.prepare(`
+      INSERT INTO order_items (order_id, product_id, product_name, price, quantity, note)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `);
+
+    for (const item of items) {
+      insertItem.run(orderId, item.productId, item.productName, item.price, item.quantity, item.note || '');
+    }
+
+    res.status(201).json({ orderId, orderCode });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get all orders
+app.get('/api/orders', (req, res) => {
+  try {
+    const { status } = req.query;
+    let query = 'SELECT * FROM orders';
+    const params = [];
+
+    if (status) {
+      query += ' WHERE status = ?';
+      params.push(status);
+    }
+    query += ' ORDER BY created_at DESC';
+
+    const orders = db.prepare(query).all(...params);
+
+    // Get items for each order
+    const ordersWithItems = orders.map(order => {
+      const items = db.prepare('SELECT * FROM order_items WHERE order_id = ?').all(order.id);
+      return {
+        ...order,
+        items,
+      };
+    });
+
+    res.json(ordersWithItems);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get single order
+app.get('/api/orders/:id', (req, res) => {
+  try {
+    const order = db.prepare('SELECT * FROM orders WHERE id = ?').get(req.params.id);
+    if (!order) {
+      return res.status(404).json({ error: 'Order not found' });
+    }
+
+    const items = db.prepare('SELECT * FROM order_items WHERE order_id = ?').all(order.id);
+    res.json({ ...order, items });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Update order status
+app.put('/api/orders/:id/status', (req, res) => {
+  try {
+    const { status } = req.body;
+    const validStatuses = ['pending', 'confirmed', 'preparing', 'delivering', 'completed', 'cancelled'];
+
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({ error: 'Invalid status' });
+    }
+
+    db.prepare(`
+      UPDATE orders SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?
+    `).run(status, req.params.id);
+
+    const updated = db.prepare('SELECT * FROM orders WHERE id = ?').get(req.params.id);
+    res.json(updated);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Delete order
+app.delete('/api/orders/:id', (req, res) => {
+  try {
+    db.prepare('DELETE FROM order_items WHERE order_id = ?').run(req.params.id);
+    db.prepare('DELETE FROM orders WHERE id = ?').run(req.params.id);
+    res.json({ message: 'Order deleted successfully' });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

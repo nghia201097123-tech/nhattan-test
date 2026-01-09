@@ -41,6 +41,34 @@ db.exec(`
     zalo TEXT,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
+
+  CREATE TABLE IF NOT EXISTS orders (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    order_code TEXT UNIQUE NOT NULL,
+    customer_name TEXT NOT NULL,
+    phone TEXT NOT NULL,
+    email TEXT,
+    address TEXT NOT NULL,
+    delivery_date TEXT NOT NULL,
+    delivery_time TEXT NOT NULL,
+    payment_method TEXT NOT NULL,
+    note TEXT,
+    status TEXT DEFAULT 'pending',
+    total_price INTEGER NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE IF NOT EXISTS order_items (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    order_id INTEGER NOT NULL,
+    product_id INTEGER,
+    product_name TEXT NOT NULL,
+    price INTEGER NOT NULL,
+    quantity INTEGER NOT NULL,
+    note TEXT,
+    FOREIGN KEY (order_id) REFERENCES orders(id)
+  );
 `);
 
 // Seed default categories if empty
