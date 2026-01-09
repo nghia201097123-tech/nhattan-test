@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useStore } from '../context/StoreContext';
+import { useCart } from '../context/CartContext';
 import type { Product } from '../types';
+import toast from 'react-hot-toast';
 
 const formatPrice = (price: number) => {
   return new Intl.NumberFormat('vi-VN', {
@@ -9,10 +11,14 @@ const formatPrice = (price: number) => {
   }).format(price);
 };
 
-const ProductCard = ({ product }: { product: Product }) => {
+const ProductCard = ({ product, onViewDetail, onAddToCart }: {
+  product: Product;
+  onViewDetail: () => void;
+  onAddToCart: () => void;
+}) => {
   return (
     <div className="card group">
-      <div className="relative overflow-hidden">
+      <div className="relative overflow-hidden cursor-pointer" onClick={onViewDetail}>
         <img
           src={product.image}
           alt={product.name}
@@ -33,12 +39,18 @@ const ProductCard = ({ product }: { product: Product }) => {
         )}
 
         {/* Quick action button */}
-        <button className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-white text-sky-600 px-6 py-2 rounded-full font-semibold opacity-0 group-hover:opacity-100 transition-all duration-300 hover:bg-sky-500 hover:text-white shadow-xl transform translate-y-4 group-hover:translate-y-0">
+        <button
+          onClick={(e) => { e.stopPropagation(); onViewDetail(); }}
+          className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-white text-sky-600 px-6 py-2 rounded-full font-semibold opacity-0 group-hover:opacity-100 transition-all duration-300 hover:bg-sky-500 hover:text-white shadow-xl transform translate-y-4 group-hover:translate-y-0"
+        >
           Xem chi tiết
         </button>
       </div>
       <div className="p-5">
-        <h3 className="text-lg font-bold text-slate-800 mb-2 group-hover:text-sky-500 transition-colors">
+        <h3
+          onClick={onViewDetail}
+          className="text-lg font-bold text-slate-800 mb-2 group-hover:text-sky-500 transition-colors cursor-pointer"
+        >
           {product.name}
         </h3>
         <p className="text-slate-500 text-sm mb-4 line-clamp-2">
@@ -48,7 +60,10 @@ const ProductCard = ({ product }: { product: Product }) => {
           <span className="text-xl font-bold text-sky-500">
             {formatPrice(product.price)}
           </span>
-          <button className="bg-gradient-to-r from-amber-400 to-amber-500 text-slate-900 px-4 py-2 rounded-full font-semibold hover:from-amber-500 hover:to-amber-600 transition-all shadow-md hover:shadow-lg">
+          <button
+            onClick={onAddToCart}
+            className="bg-gradient-to-r from-amber-400 to-amber-500 text-slate-900 px-4 py-2 rounded-full font-semibold hover:from-amber-500 hover:to-amber-600 transition-all shadow-md hover:shadow-lg"
+          >
             Đặt ngay
           </button>
         </div>
@@ -59,11 +74,20 @@ const ProductCard = ({ product }: { product: Product }) => {
 
 const Products = () => {
   const { products, categories } = useStore();
+  const { addToCart, openProductDetail } = useCart();
   const [activeCategory, setActiveCategory] = useState('all');
 
   const filteredProducts = activeCategory === 'all'
     ? products
     : products.filter(product => product.category === activeCategory);
+
+  const handleAddToCart = (product: Product) => {
+    addToCart(product, 1);
+    toast.success(`Đã thêm ${product.name} vào giỏ hàng!`, {
+      icon: '🛒',
+      duration: 2000,
+    });
+  };
 
   return (
     <section id="products" className="py-20 bg-gradient-to-b from-sky-50 to-white relative overflow-hidden">
@@ -107,14 +131,19 @@ const Products = () => {
         {/* Products Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {filteredProducts.map((product) => (
-            <ProductCard key={product.id} product={product} />
+            <ProductCard
+              key={product.id}
+              product={product}
+              onViewDetail={() => openProductDetail(product)}
+              onAddToCart={() => handleAddToCart(product)}
+            />
           ))}
         </div>
 
         {/* View All Button */}
         <div className="text-center mt-12">
           <a href="#contact" className="btn-primary inline-flex items-center gap-2">
-            <span>Xem thêm sản phẩm</span>
+            <span>Liên hệ đặt hàng</span>
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
             </svg>
