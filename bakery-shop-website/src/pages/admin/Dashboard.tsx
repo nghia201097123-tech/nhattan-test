@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { statsApi } from '../services/api';
-import type { Stats } from '../types';
+import { statsApi } from '../../services/adminApi';
+import type { Stats } from '../../types';
 
 const Dashboard = () => {
   const [stats, setStats] = useState<Stats | null>(null);
@@ -45,7 +45,7 @@ const Dashboard = () => {
           {/* Stats Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             {statCards.map((stat, index) => (
-              <div key={index} className="card">
+              <div key={index} className="bg-white p-6 rounded-2xl shadow-sm">
                 <div className="flex items-center gap-4">
                   <div className={`w-14 h-14 ${stat.color} rounded-xl flex items-center justify-center text-2xl text-white shadow-lg`}>
                     {stat.icon}
@@ -60,11 +60,11 @@ const Dashboard = () => {
           </div>
 
           {/* Quick Actions */}
-          <div className="card">
+          <div className="bg-white p-6 rounded-2xl shadow-sm">
             <h2 className="text-xl font-bold text-slate-800 mb-4">Thao tác nhanh</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <Link
-                to="/products"
+                to="/admin/products"
                 className="flex items-center gap-4 p-4 bg-sky-50 rounded-xl hover:bg-sky-100 transition-colors"
               >
                 <span className="text-3xl">🍰</span>
@@ -75,7 +75,7 @@ const Dashboard = () => {
               </Link>
 
               <Link
-                to="/store-info"
+                to="/admin/store-info"
                 className="flex items-center gap-4 p-4 bg-amber-50 rounded-xl hover:bg-amber-100 transition-colors"
               >
                 <span className="text-3xl">🏪</span>
@@ -86,9 +86,7 @@ const Dashboard = () => {
               </Link>
 
               <a
-                href="http://localhost:5173"
-                target="_blank"
-                rel="noopener noreferrer"
+                href="/"
                 className="flex items-center gap-4 p-4 bg-emerald-50 rounded-xl hover:bg-emerald-100 transition-colors"
               >
                 <span className="text-3xl">🌐</span>

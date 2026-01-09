@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { productsApi, categoriesApi } from '../services/api';
-import type { Product, Category } from '../types';
+import { productsApi, categoriesApi } from '../../services/adminApi';
+import type { Product, Category } from '../../types';
 import toast from 'react-hot-toast';
 
 const formatPrice = (price: number) => {
@@ -116,7 +116,7 @@ const Products = () => {
           <h1 className="text-3xl font-bold text-slate-800">Quản lý sản phẩm</h1>
           <p className="text-slate-600">Thêm, sửa, xóa các sản phẩm bánh</p>
         </div>
-        <button onClick={() => handleOpenModal()} className="btn btn-primary flex items-center gap-2">
+        <button onClick={() => handleOpenModal()} className="bg-sky-500 hover:bg-sky-600 text-white px-6 py-3 rounded-xl font-semibold transition-colors flex items-center gap-2">
           <span>➕</span>
           <span>Thêm sản phẩm</span>
         </button>
@@ -127,7 +127,7 @@ const Products = () => {
           <div className="animate-spin w-8 h-8 border-4 border-sky-500 border-t-transparent rounded-full"></div>
         </div>
       ) : (
-        <div className="card overflow-hidden">
+        <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
           <table className="w-full">
             <thead className="bg-slate-50">
               <tr>
@@ -215,7 +215,7 @@ const Products = () => {
                 <label className="block text-sm font-medium text-slate-700 mb-1">Tên sản phẩm *</label>
                 <input
                   type="text"
-                  className="input"
+                  className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-sky-400 focus:border-sky-400 outline-none transition-all"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   required
@@ -225,7 +225,7 @@ const Products = () => {
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Mô tả</label>
                 <textarea
-                  className="input resize-none"
+                  className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-sky-400 focus:border-sky-400 outline-none transition-all resize-none"
                   rows={3}
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
@@ -237,7 +237,7 @@ const Products = () => {
                   <label className="block text-sm font-medium text-slate-700 mb-1">Giá (VNĐ) *</label>
                   <input
                     type="number"
-                    className="input"
+                    className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-sky-400 focus:border-sky-400 outline-none transition-all"
                     value={formData.price}
                     onChange={(e) => setFormData({ ...formData, price: parseInt(e.target.value) || 0 })}
                     required
@@ -246,7 +246,7 @@ const Products = () => {
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Danh mục *</label>
                   <select
-                    className="input"
+                    className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-sky-400 focus:border-sky-400 outline-none transition-all"
                     value={formData.category}
                     onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                   >
@@ -261,7 +261,7 @@ const Products = () => {
                 <label className="block text-sm font-medium text-slate-700 mb-1">URL hình ảnh</label>
                 <input
                   type="url"
-                  className="input"
+                  className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-sky-400 focus:border-sky-400 outline-none transition-all"
                   value={formData.image}
                   onChange={(e) => setFormData({ ...formData, image: e.target.value })}
                   placeholder="https://..."
@@ -290,10 +290,10 @@ const Products = () => {
               </div>
 
               <div className="flex gap-3 pt-4">
-                <button type="button" onClick={handleCloseModal} className="btn btn-secondary flex-1">
+                <button type="button" onClick={handleCloseModal} className="flex-1 px-6 py-3 border-2 border-slate-200 rounded-xl font-semibold text-slate-600 hover:bg-slate-50 transition-colors">
                   Hủy
                 </button>
-                <button type="submit" className="btn btn-primary flex-1">
+                <button type="submit" className="flex-1 px-6 py-3 bg-sky-500 text-white rounded-xl font-semibold hover:bg-sky-600 transition-colors">
                   {editingProduct ? 'Cập nhật' : 'Thêm mới'}
                 </button>
               </div>

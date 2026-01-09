@@ -1,5 +1,5 @@
 export interface Product {
-  id: number;
+  id?: number;
   name: string;
   description: string;
   price: number;
@@ -7,6 +7,9 @@ export interface Product {
   category: string;
   isNew?: boolean;
   isBestSeller?: boolean;
+  isActive?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface Category {
@@ -31,4 +34,11 @@ export interface StoreInfo {
     instagram?: string;
     zalo?: string;
   };
+}
+
+export interface Stats {
+  totalProducts: number;
+  activeProducts: number;
+  categories: number;
+  bestSellers: number;
 }

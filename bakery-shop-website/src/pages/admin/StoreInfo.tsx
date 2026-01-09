@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { storeInfoApi } from '../services/api';
-import type { StoreInfo as StoreInfoType } from '../types';
+import { storeInfoApi } from '../../services/adminApi';
+import type { StoreInfo as StoreInfoType } from '../../types';
 import toast from 'react-hot-toast';
 
 const StoreInfo = () => {
@@ -69,7 +69,7 @@ const StoreInfo = () => {
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Basic Info */}
-        <div className="card">
+        <div className="bg-white p-6 rounded-2xl shadow-sm">
           <h2 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
             <span>🏪</span> Thông tin cơ bản
           </h2>
@@ -78,7 +78,7 @@ const StoreInfo = () => {
               <label className="block text-sm font-medium text-slate-700 mb-1">Tên cửa hàng *</label>
               <input
                 type="text"
-                className="input"
+                className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-sky-400 focus:border-sky-400 outline-none transition-all"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 required
@@ -88,7 +88,7 @@ const StoreInfo = () => {
               <label className="block text-sm font-medium text-slate-700 mb-1">Slogan</label>
               <input
                 type="text"
-                className="input"
+                className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-sky-400 focus:border-sky-400 outline-none transition-all"
                 value={formData.slogan}
                 onChange={(e) => setFormData({ ...formData, slogan: e.target.value })}
               />
@@ -96,7 +96,7 @@ const StoreInfo = () => {
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Mô tả</label>
               <textarea
-                className="input resize-none"
+                className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-sky-400 focus:border-sky-400 outline-none transition-all resize-none"
                 rows={4}
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
@@ -106,7 +106,7 @@ const StoreInfo = () => {
         </div>
 
         {/* Contact Info */}
-        <div className="card">
+        <div className="bg-white p-6 rounded-2xl shadow-sm">
           <h2 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
             <span>📞</span> Thông tin liên hệ
           </h2>
@@ -115,7 +115,7 @@ const StoreInfo = () => {
               <label className="block text-sm font-medium text-slate-700 mb-1">Địa chỉ</label>
               <input
                 type="text"
-                className="input"
+                className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-sky-400 focus:border-sky-400 outline-none transition-all"
                 value={formData.address}
                 onChange={(e) => setFormData({ ...formData, address: e.target.value })}
               />
@@ -124,7 +124,7 @@ const StoreInfo = () => {
               <label className="block text-sm font-medium text-slate-700 mb-1">Số điện thoại</label>
               <input
                 type="text"
-                className="input"
+                className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-sky-400 focus:border-sky-400 outline-none transition-all"
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
               />
@@ -133,7 +133,7 @@ const StoreInfo = () => {
               <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
               <input
                 type="email"
-                className="input"
+                className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-sky-400 focus:border-sky-400 outline-none transition-all"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               />
@@ -142,7 +142,7 @@ const StoreInfo = () => {
         </div>
 
         {/* Opening Hours */}
-        <div className="card">
+        <div className="bg-white p-6 rounded-2xl shadow-sm">
           <h2 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
             <span>🕐</span> Giờ mở cửa
           </h2>
@@ -151,7 +151,7 @@ const StoreInfo = () => {
               <label className="block text-sm font-medium text-slate-700 mb-1">Thứ 2 - Thứ 6</label>
               <input
                 type="text"
-                className="input"
+                className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-sky-400 focus:border-sky-400 outline-none transition-all"
                 placeholder="7:00 - 21:00"
                 value={formData.openingHours.weekdays}
                 onChange={(e) => setFormData({
@@ -164,7 +164,7 @@ const StoreInfo = () => {
               <label className="block text-sm font-medium text-slate-700 mb-1">Thứ 7 - Chủ nhật</label>
               <input
                 type="text"
-                className="input"
+                className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-sky-400 focus:border-sky-400 outline-none transition-all"
                 placeholder="7:00 - 22:00"
                 value={formData.openingHours.weekend}
                 onChange={(e) => setFormData({
@@ -177,7 +177,7 @@ const StoreInfo = () => {
         </div>
 
         {/* Social Media */}
-        <div className="card">
+        <div className="bg-white p-6 rounded-2xl shadow-sm">
           <h2 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
             <span>🌐</span> Mạng xã hội
           </h2>
@@ -186,7 +186,7 @@ const StoreInfo = () => {
               <label className="block text-sm font-medium text-slate-700 mb-1">Facebook</label>
               <input
                 type="url"
-                className="input"
+                className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-sky-400 focus:border-sky-400 outline-none transition-all"
                 placeholder="https://facebook.com/..."
                 value={formData.socialMedia.facebook || ''}
                 onChange={(e) => setFormData({
@@ -199,7 +199,7 @@ const StoreInfo = () => {
               <label className="block text-sm font-medium text-slate-700 mb-1">Instagram</label>
               <input
                 type="url"
-                className="input"
+                className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-sky-400 focus:border-sky-400 outline-none transition-all"
                 placeholder="https://instagram.com/..."
                 value={formData.socialMedia.instagram || ''}
                 onChange={(e) => setFormData({
@@ -212,7 +212,7 @@ const StoreInfo = () => {
               <label className="block text-sm font-medium text-slate-700 mb-1">Zalo</label>
               <input
                 type="url"
-                className="input"
+                className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-sky-400 focus:border-sky-400 outline-none transition-all"
                 placeholder="https://zalo.me/..."
                 value={formData.socialMedia.zalo || ''}
                 onChange={(e) => setFormData({
@@ -229,7 +229,7 @@ const StoreInfo = () => {
           <button
             type="submit"
             disabled={saving}
-            className="btn btn-primary px-8 flex items-center gap-2"
+            className="bg-sky-500 hover:bg-sky-600 disabled:bg-sky-300 text-white px-8 py-3 rounded-xl font-semibold transition-colors flex items-center gap-2"
           >
             {saving ? (
               <>

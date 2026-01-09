@@ -1,10 +1,10 @@
 import { NavLink, Outlet } from 'react-router-dom';
 
-const Layout = () => {
+const AdminLayout = () => {
   const navItems = [
-    { path: '/', label: 'Dashboard', icon: '📊' },
-    { path: '/products', label: 'Sản phẩm', icon: '🍰' },
-    { path: '/store-info', label: 'Thông tin cửa hàng', icon: '🏪' },
+    { path: '/admin', label: 'Dashboard', icon: '📊', end: true },
+    { path: '/admin/products', label: 'Sản phẩm', icon: '🍰' },
+    { path: '/admin/store-info', label: 'Thông tin cửa hàng', icon: '🏪' },
   ];
 
   return (
@@ -29,6 +29,7 @@ const Layout = () => {
               <li key={item.path}>
                 <NavLink
                   to={item.path}
+                  end={item.end}
                   className={({ isActive }) =>
                     `flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
                       isActive
@@ -47,9 +48,7 @@ const Layout = () => {
 
         <div className="p-4 border-t border-sky-500">
           <a
-            href="http://localhost:5173"
-            target="_blank"
-            rel="noopener noreferrer"
+            href="/"
             className="flex items-center gap-2 text-sky-200 hover:text-white transition-colors"
           >
             <span>🌐</span>
@@ -59,11 +58,11 @@ const Layout = () => {
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 overflow-auto">
+      <main className="flex-1 bg-slate-100 overflow-auto">
         <Outlet />
       </main>
     </div>
   );
 };
 
-export default Layout;
+export default AdminLayout;
