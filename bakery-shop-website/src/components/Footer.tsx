@@ -4,91 +4,120 @@ const Footer = () => {
   const currentYear = new Date().getFullYear();
 
   return (
-    <footer className="bg-[var(--color-dark)] text-white">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+    <footer className="bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 text-white relative overflow-hidden">
+      {/* Decorative elements */}
+      <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl" />
+      <div className="absolute bottom-0 right-1/4 w-72 h-72 bg-yellow-500/10 rounded-full blur-3xl" />
+
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12">
           {/* Brand */}
-          <div>
-            <div className="flex items-center gap-2 mb-4">
-              <span className="text-3xl">🧁</span>
+          <div className="lg:col-span-1">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 bg-gradient-to-br from-amber-400 to-amber-500 rounded-xl flex items-center justify-center shadow-lg">
+                <span className="text-2xl">🧁</span>
+              </div>
               <span className="text-xl font-bold">{storeInfo.name}</span>
             </div>
-            <p className="text-gray-400 text-sm">
+            <p className="text-slate-400 text-sm leading-relaxed">
               {storeInfo.slogan}
             </p>
+            <div className="mt-6 flex gap-3">
+              {storeInfo.socialMedia.facebook && (
+                <a
+                  href={storeInfo.socialMedia.facebook}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-10 h-10 bg-white/10 hover:bg-blue-500 rounded-lg flex items-center justify-center transition-all"
+                >
+                  f
+                </a>
+              )}
+              {storeInfo.socialMedia.instagram && (
+                <a
+                  href={storeInfo.socialMedia.instagram}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-10 h-10 bg-white/10 hover:bg-gradient-to-r hover:from-purple-500 hover:to-pink-500 rounded-lg flex items-center justify-center transition-all"
+                >
+                  IG
+                </a>
+              )}
+              {storeInfo.socialMedia.zalo && (
+                <a
+                  href={storeInfo.socialMedia.zalo}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-10 h-10 bg-white/10 hover:bg-blue-400 rounded-lg flex items-center justify-center transition-all text-xs"
+                >
+                  Zalo
+                </a>
+              )}
+            </div>
           </div>
 
           {/* Quick Links */}
           <div>
-            <h4 className="text-lg font-semibold mb-4">Liên Kết Nhanh</h4>
-            <ul className="space-y-2">
-              <li>
-                <a href="#home" className="text-gray-400 hover:text-white transition-colors">
-                  Trang chủ
-                </a>
-              </li>
-              <li>
-                <a href="#about" className="text-gray-400 hover:text-white transition-colors">
-                  Về chúng tôi
-                </a>
-              </li>
-              <li>
-                <a href="#products" className="text-gray-400 hover:text-white transition-colors">
-                  Sản phẩm
-                </a>
-              </li>
-              <li>
-                <a href="#contact" className="text-gray-400 hover:text-white transition-colors">
-                  Liên hệ
-                </a>
-              </li>
+            <h4 className="text-lg font-semibold mb-6 flex items-center gap-2">
+              <span className="w-8 h-1 bg-amber-400 rounded-full"></span>
+              Liên Kết Nhanh
+            </h4>
+            <ul className="space-y-3">
+              {['Trang chủ', 'Về chúng tôi', 'Sản phẩm', 'Liên hệ'].map((item, index) => (
+                <li key={index}>
+                  <a
+                    href={`#${['home', 'about', 'products', 'contact'][index]}`}
+                    className="text-slate-400 hover:text-amber-400 transition-colors flex items-center gap-2 group"
+                  >
+                    <span className="w-1.5 h-1.5 bg-blue-500 rounded-full group-hover:bg-amber-400 transition-colors"></span>
+                    {item}
+                  </a>
+                </li>
+              ))}
             </ul>
           </div>
 
           {/* Products */}
           <div>
-            <h4 className="text-lg font-semibold mb-4">Sản Phẩm</h4>
-            <ul className="space-y-2">
-              <li>
-                <a href="#products" className="text-gray-400 hover:text-white transition-colors">
-                  Bánh kem sinh nhật
-                </a>
-              </li>
-              <li>
-                <a href="#products" className="text-gray-400 hover:text-white transition-colors">
-                  Bánh cưới
-                </a>
-              </li>
-              <li>
-                <a href="#products" className="text-gray-400 hover:text-white transition-colors">
-                  Bánh mì thủ công
-                </a>
-              </li>
-              <li>
-                <a href="#products" className="text-gray-400 hover:text-white transition-colors">
-                  Bánh ngọt Pháp
-                </a>
-              </li>
+            <h4 className="text-lg font-semibold mb-6 flex items-center gap-2">
+              <span className="w-8 h-1 bg-amber-400 rounded-full"></span>
+              Sản Phẩm
+            </h4>
+            <ul className="space-y-3">
+              {['Bánh kem sinh nhật', 'Bánh cưới', 'Bánh mì thủ công', 'Bánh ngọt Pháp'].map((item, index) => (
+                <li key={index}>
+                  <a
+                    href="#products"
+                    className="text-slate-400 hover:text-amber-400 transition-colors flex items-center gap-2 group"
+                  >
+                    <span className="w-1.5 h-1.5 bg-blue-500 rounded-full group-hover:bg-amber-400 transition-colors"></span>
+                    {item}
+                  </a>
+                </li>
+              ))}
             </ul>
           </div>
 
           {/* Contact */}
           <div>
-            <h4 className="text-lg font-semibold mb-4">Liên Hệ</h4>
-            <ul className="space-y-2 text-gray-400">
-              <li className="flex items-start gap-2">
-                <span>📍</span>
+            <h4 className="text-lg font-semibold mb-6 flex items-center gap-2">
+              <span className="w-8 h-1 bg-amber-400 rounded-full"></span>
+              Liên Hệ
+            </h4>
+            <ul className="space-y-4 text-slate-400">
+              <li className="flex items-start gap-3">
+                <span className="w-8 h-8 bg-blue-500/20 rounded-lg flex items-center justify-center flex-shrink-0 text-sm">📍</span>
                 <span className="text-sm">{storeInfo.address}</span>
               </li>
-              <li className="flex items-center gap-2">
-                <span>📞</span>
-                <a href={`tel:${storeInfo.phone.replace(/\s/g, '')}`} className="hover:text-white transition-colors">
+              <li className="flex items-center gap-3">
+                <span className="w-8 h-8 bg-blue-500/20 rounded-lg flex items-center justify-center flex-shrink-0 text-sm">📞</span>
+                <a href={`tel:${storeInfo.phone.replace(/\s/g, '')}`} className="hover:text-amber-400 transition-colors">
                   {storeInfo.phone}
                 </a>
               </li>
-              <li className="flex items-center gap-2">
-                <span>📧</span>
-                <a href={`mailto:${storeInfo.email}`} className="hover:text-white transition-colors text-sm">
+              <li className="flex items-center gap-3">
+                <span className="w-8 h-8 bg-blue-500/20 rounded-lg flex items-center justify-center flex-shrink-0 text-sm">📧</span>
+                <a href={`mailto:${storeInfo.email}`} className="hover:text-amber-400 transition-colors text-sm">
                   {storeInfo.email}
                 </a>
               </li>
@@ -97,41 +126,13 @@ const Footer = () => {
         </div>
 
         {/* Bottom Bar */}
-        <div className="border-t border-gray-700 mt-8 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
-          <p className="text-gray-400 text-sm">
-            © {currentYear} {storeInfo.name}. All rights reserved.
+        <div className="border-t border-white/10 mt-12 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
+          <p className="text-slate-400 text-sm">
+            © {currentYear} <span className="text-amber-400">{storeInfo.name}</span>. All rights reserved.
           </p>
-          <div className="flex gap-4">
-            {storeInfo.socialMedia.facebook && (
-              <a
-                href={storeInfo.socialMedia.facebook}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-gray-400 hover:text-white transition-colors"
-              >
-                Facebook
-              </a>
-            )}
-            {storeInfo.socialMedia.instagram && (
-              <a
-                href={storeInfo.socialMedia.instagram}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-gray-400 hover:text-white transition-colors"
-              >
-                Instagram
-              </a>
-            )}
-            {storeInfo.socialMedia.zalo && (
-              <a
-                href={storeInfo.socialMedia.zalo}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-gray-400 hover:text-white transition-colors"
-              >
-                Zalo
-              </a>
-            )}
+          <div className="flex gap-6 text-sm">
+            <a href="#" className="text-slate-400 hover:text-white transition-colors">Chính sách bảo mật</a>
+            <a href="#" className="text-slate-400 hover:text-white transition-colors">Điều khoản sử dụng</a>
           </div>
         </div>
       </div>
