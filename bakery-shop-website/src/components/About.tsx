@@ -6,13 +6,13 @@ const About = () => {
       icon: '🌿',
       title: 'Nguyên liệu tươi ngon',
       description: 'Chúng tôi chỉ sử dụng nguyên liệu tươi mới nhất, được chọn lọc kỹ càng',
-      color: 'from-green-400 to-emerald-500',
+      color: 'from-emerald-400 to-green-500',
     },
     {
       icon: '👨‍🍳',
       title: 'Thợ làm bánh chuyên nghiệp',
       description: 'Đội ngũ thợ bánh với hơn 10 năm kinh nghiệm trong ngành',
-      color: 'from-blue-400 to-blue-600',
+      color: 'from-sky-400 to-sky-500',
     },
     {
       icon: '🚚',
@@ -30,18 +30,18 @@ const About = () => {
 
   return (
     <section id="about" className="py-20 bg-white relative overflow-hidden">
-      {/* Decorative background */}
-      <div className="absolute top-0 right-0 w-96 h-96 bg-blue-100 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl opacity-50" />
-      <div className="absolute bottom-0 left-0 w-72 h-72 bg-yellow-100 rounded-full translate-y-1/2 -translate-x-1/2 blur-3xl opacity-50" />
+      {/* Decorative clouds */}
+      <div className="absolute top-10 right-0 w-64 h-32 bg-sky-100 rounded-full blur-3xl opacity-60" />
+      <div className="absolute bottom-10 left-0 w-48 h-24 bg-amber-100 rounded-full blur-3xl opacity-60" />
 
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
         <div className="text-center mb-16">
-          <span className="inline-block px-4 py-1 bg-blue-100 text-blue-600 rounded-full text-sm font-semibold mb-4">
+          <span className="inline-block px-4 py-1 bg-sky-100 text-sky-600 rounded-full text-sm font-semibold mb-4">
             Về Chúng Tôi
           </span>
           <h2 className="text-3xl md:text-4xl font-bold text-slate-800 mb-4">
-            Câu Chuyện Của <span className="text-blue-600">Sweet Dreams</span>
+            Câu Chuyện Của <span className="text-sky-500">Sweet Dreams</span>
           </h2>
           <p className="text-lg text-slate-600 max-w-2xl mx-auto">
             {storeInfo.description}
@@ -53,7 +53,7 @@ const About = () => {
           {features.map((feature, index) => (
             <div
               key={index}
-              className="group relative bg-white p-6 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 border border-slate-100 hover:-translate-y-1"
+              className="group relative bg-white p-6 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 border border-sky-100 hover:-translate-y-1"
             >
               <div className={`w-14 h-14 bg-gradient-to-br ${feature.color} rounded-xl flex items-center justify-center mb-4 shadow-lg group-hover:scale-110 transition-transform`}>
                 <span className="text-2xl">{feature.icon}</span>
@@ -74,10 +74,10 @@ const About = () => {
               alt="Tiệm bánh"
               className="w-full h-80 object-cover rounded-2xl shadow-xl"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-blue-900/60 to-transparent rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-6">
+            <div className="absolute inset-0 bg-gradient-to-t from-sky-600/60 to-transparent rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-6">
               <div className="text-white">
                 <p className="font-bold text-xl">Không gian cửa hàng</p>
-                <p className="text-blue-100">Ấm cúng & hiện đại</p>
+                <p className="text-sky-100">Ấm cúng & hiện đại</p>
               </div>
             </div>
           </div>
@@ -98,7 +98,7 @@ const About = () => {
                 alt="Bánh mì"
                 className="w-full h-36 object-cover rounded-2xl shadow-xl"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-blue-500/60 to-transparent rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-4">
+              <div className="absolute inset-0 bg-gradient-to-t from-sky-500/60 to-transparent rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-4">
                 <p className="text-white font-semibold">Nguyên liệu cao cấp</p>
               </div>
             </div>
