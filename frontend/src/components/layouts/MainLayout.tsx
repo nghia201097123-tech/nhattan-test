@@ -14,10 +14,12 @@ import {
   MenuFoldOutlined,
   MenuUnfoldOutlined,
   AppstoreOutlined,
+  GlobalOutlined,
 } from '@ant-design/icons';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuthStore } from '@/store/auth.store';
 import { useUIStore } from '@/store/ui.store';
+import { useLanguageStore } from '@/store/language.store';
 
 const { Header, Sider, Content } = Layout;
 
@@ -25,65 +27,66 @@ interface MainLayoutProps {
   children: React.ReactNode;
 }
 
-const menuItems = [
-  {
-    key: '/dashboard',
-    icon: <DashboardOutlined />,
-    label: 'Dashboard',
-  },
-  {
-    key: '/samples',
-    icon: <ExperimentOutlined />,
-    label: 'Qu\u1EA3n l\u00FD m\u1EABu gi\u1ED1ng',
-    children: [
-      { key: '/samples/collection', label: 'Thu th\u1EADp m\u1EABu' },
-      { key: '/samples/evaluation', label: '\u0110\u00E1nh gi\u00E1 m\u1EABu' },
-      { key: '/samples/list', label: 'Danh s\u00E1ch m\u1EABu' },
-    ],
-  },
-  {
-    key: '/warehouse',
-    icon: <DatabaseOutlined />,
-    label: 'Qu\u1EA3n l\u00FD kho',
-    children: [
-      { key: '/warehouse/receipts', icon: <ImportOutlined />, label: 'Phi\u1EBFu nh\u1EADp' },
-      { key: '/warehouse/exports', icon: <ExportOutlined />, label: 'Phi\u1EBFu xu\u1EA5t' },
-      { key: '/warehouse/inventory', label: 'T\u1ED3n kho' },
-    ],
-  },
-  {
-    key: '/catalog',
-    icon: <AppstoreOutlined />,
-    label: 'Danh m\u1EE5c',
-    children: [
-      { key: '/catalog/categories', label: 'Nh\u00F3m gi\u1ED1ng' },
-      { key: '/catalog/varieties', label: 'Gi\u1ED1ng' },
-      { key: '/catalog/warehouses', label: 'Kho' },
-      { key: '/catalog/locations', label: 'V\u1ECB tr\u00ED l\u01B0u tr\u1EEF' },
-      { key: '/catalog/providers', label: 'Ngu\u1ED3n cung c\u1EA5p' },
-      { key: '/catalog/staff', label: 'Nh\u00E2n vi\u00EAn' },
-    ],
-  },
-  {
-    key: '/settings',
-    icon: <SettingOutlined />,
-    label: 'C\u00E0i \u0111\u1EB7t',
-    children: [
-      { key: '/settings/users', label: 'Ng\u01B0\u1EDDi d\u00F9ng' },
-      { key: '/settings/roles', label: 'Vai tr\u00F2' },
-    ],
-  },
-];
-
 export default function MainLayout({ children }: MainLayoutProps) {
   const router = useRouter();
   const pathname = usePathname();
   const { user, logout, loadUser } = useAuthStore();
   const { sidebarCollapsed, toggleSidebar } = useUIStore();
+  const { t, language, setLanguage } = useLanguageStore();
 
   useEffect(() => {
     loadUser();
   }, [loadUser]);
+
+  const menuItems = [
+    {
+      key: '/dashboard',
+      icon: <DashboardOutlined />,
+      label: t.menu.dashboard,
+    },
+    {
+      key: '/samples',
+      icon: <ExperimentOutlined />,
+      label: t.menu.samples,
+      children: [
+        { key: '/samples/collection', label: t.menu.sampleCollection },
+        { key: '/samples/evaluation', label: t.menu.sampleEvaluation },
+        { key: '/samples/list', label: t.menu.sampleList },
+      ],
+    },
+    {
+      key: '/warehouse',
+      icon: <DatabaseOutlined />,
+      label: t.menu.warehouse,
+      children: [
+        { key: '/warehouse/receipts', icon: <ImportOutlined />, label: t.menu.receipts },
+        { key: '/warehouse/exports', icon: <ExportOutlined />, label: t.menu.exports },
+        { key: '/warehouse/inventory', label: t.menu.inventory },
+      ],
+    },
+    {
+      key: '/catalog',
+      icon: <AppstoreOutlined />,
+      label: t.menu.catalog,
+      children: [
+        { key: '/catalog/categories', label: t.menu.categories },
+        { key: '/catalog/varieties', label: t.menu.varieties },
+        { key: '/catalog/warehouses', label: t.menu.warehouses },
+        { key: '/catalog/locations', label: t.menu.locations },
+        { key: '/catalog/providers', label: t.menu.providers },
+        { key: '/catalog/staff', label: t.menu.staff },
+      ],
+    },
+    {
+      key: '/settings',
+      icon: <SettingOutlined />,
+      label: t.menu.settings,
+      children: [
+        { key: '/settings/users', label: t.menu.users },
+        { key: '/settings/roles', label: t.menu.roles },
+      ],
+    },
+  ];
 
   const handleMenuClick = ({ key }: { key: string }) => {
     router.push(key);
@@ -98,7 +101,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
     {
       key: 'profile',
       icon: <UserOutlined />,
-      label: 'Th\u00F4ng tin c\u00E1 nh\u00E2n',
+      label: t.common.profile,
     },
     {
       type: 'divider' as const,
@@ -106,8 +109,21 @@ export default function MainLayout({ children }: MainLayoutProps) {
     {
       key: 'logout',
       icon: <LogoutOutlined />,
-      label: '\u0110\u0103ng xu\u1EA5t',
+      label: t.auth.logout,
       onClick: handleLogout,
+    },
+  ];
+
+  const languageItems = [
+    {
+      key: 'vi',
+      label: '🇻🇳 Tiếng Việt',
+      onClick: () => setLanguage('vi'),
+    },
+    {
+      key: 'en',
+      label: '🇬🇧 English',
+      onClick: () => setLanguage('en'),
     },
   ];
 
@@ -118,7 +134,10 @@ export default function MainLayout({ children }: MainLayoutProps) {
         collapsible
         collapsed={sidebarCollapsed}
         theme="dark"
-        width={250}
+        width={260}
+        style={{
+          background: 'linear-gradient(180deg, #001529 0%, #002140 100%)',
+        }}
       >
         <div
           style={{
@@ -126,12 +145,21 @@ export default function MainLayout({ children }: MainLayoutProps) {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: 'white',
-            fontSize: sidebarCollapsed ? 16 : 18,
-            fontWeight: 'bold',
+            borderBottom: '1px solid rgba(255,255,255,0.1)',
           }}
         >
-          {sidebarCollapsed ? 'SMS' : 'Seed Management'}
+          <span style={{ fontSize: 24, marginRight: sidebarCollapsed ? 0 : 8 }}>🌱</span>
+          {!sidebarCollapsed && (
+            <span
+              style={{
+                color: 'white',
+                fontSize: 18,
+                fontWeight: 'bold',
+              }}
+            >
+              {t.app.name}
+            </span>
+          )}
         </div>
         <Menu
           theme="dark"
@@ -140,39 +168,54 @@ export default function MainLayout({ children }: MainLayoutProps) {
           defaultOpenKeys={['/samples', '/warehouse', '/catalog']}
           items={menuItems}
           onClick={handleMenuClick}
+          style={{ background: 'transparent', borderRight: 0 }}
         />
       </Sider>
       <Layout>
         <Header
           style={{
-            padding: '0 16px',
+            padding: '0 24px',
             background: '#fff',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            boxShadow: '0 1px 4px rgba(0,0,0,0.1)',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
           }}
         >
           <Button
             type="text"
             icon={sidebarCollapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
             onClick={toggleSidebar}
-            style={{ fontSize: 16 }}
+            style={{ fontSize: 18 }}
           />
-          <Dropdown menu={{ items: userMenuItems }} placement="bottomRight">
-            <Space style={{ cursor: 'pointer' }}>
-              <Avatar icon={<UserOutlined />} />
-              <span>{user?.fullName || 'User'}</span>
-            </Space>
-          </Dropdown>
+          <Space size="middle">
+            {/* Language Switcher */}
+            <Dropdown menu={{ items: languageItems }} placement="bottomRight">
+              <Button type="text" icon={<GlobalOutlined />}>
+                {language === 'vi' ? 'VI' : 'EN'}
+              </Button>
+            </Dropdown>
+
+            {/* User Menu */}
+            <Dropdown menu={{ items: userMenuItems }} placement="bottomRight">
+              <Space style={{ cursor: 'pointer' }}>
+                <Avatar
+                  icon={<UserOutlined />}
+                  style={{ background: '#1890ff' }}
+                />
+                <span style={{ fontWeight: 500 }}>{user?.fullName || 'User'}</span>
+              </Space>
+            </Dropdown>
+          </Space>
         </Header>
         <Content
           style={{
-            margin: 16,
+            margin: 24,
             padding: 24,
             background: '#fff',
             borderRadius: 8,
             minHeight: 280,
+            boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
           }}
         >
           {children}
