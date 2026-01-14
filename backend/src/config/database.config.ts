@@ -7,5 +7,5 @@ export default registerAs('database', () => ({
   password: process.env.DB_PASSWORD || 'password',
   database: process.env.DB_DATABASE || 'seed_management',
   synchronize: process.env.NODE_ENV !== 'production',
-  logging: process.env.NODE_ENV === 'development',
+  logging: false,
 }));
