@@ -27,6 +27,58 @@ import { PERMISSIONS } from '../../shared/constants/permissions.constant';
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
+  // ========== ROLES ROUTES (must be before :id routes) ==========
+
+  @Get('roles/all')
+  @ApiOperation({ summary: 'Get all roles' })
+  async getAllRoles() {
+    return this.usersService.getAllRoles();
+  }
+
+  @Post('roles')
+  @Permissions(PERMISSIONS.ADMIN_USERS)
+  @ApiOperation({ summary: 'Create role' })
+  async createRole(@Body() dto: { code: string; name: string; description?: string }) {
+    return this.usersService.createRole(dto);
+  }
+
+  @Put('roles/:id')
+  @Permissions(PERMISSIONS.ADMIN_USERS)
+  @ApiOperation({ summary: 'Update role' })
+  async updateRole(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: { name?: string; description?: string },
+  ) {
+    return this.usersService.updateRole(id, dto);
+  }
+
+  @Put('roles/:id/permissions')
+  @Permissions(PERMISSIONS.ADMIN_USERS)
+  @ApiOperation({ summary: 'Update role permissions' })
+  async updateRolePermissions(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body('permissionIds') permissionIds: string[],
+  ) {
+    return this.usersService.updateRolePermissions(id, permissionIds);
+  }
+
+  @Delete('roles/:id')
+  @Permissions(PERMISSIONS.ADMIN_USERS)
+  @ApiOperation({ summary: 'Delete role' })
+  async deleteRole(@Param('id', ParseUUIDPipe) id: string) {
+    return this.usersService.deleteRole(id);
+  }
+
+  // ========== PERMISSIONS ROUTES ==========
+
+  @Get('permissions/all')
+  @ApiOperation({ summary: 'Get all permissions' })
+  async getAllPermissions() {
+    return this.usersService.getAllPermissions();
+  }
+
+  // ========== USERS ROUTES ==========
+
   @Get()
   @Permissions(PERMISSIONS.ADMIN_USERS)
   @ApiOperation({ summary: 'Get all users' })
@@ -83,51 +135,5 @@ export class UsersController {
     @Body('newPassword') newPassword: string,
   ) {
     return this.usersService.resetPassword(id, newPassword);
-  }
-
-  @Get('roles/all')
-  @ApiOperation({ summary: 'Get all roles' })
-  async getAllRoles() {
-    return this.usersService.getAllRoles();
-  }
-
-  @Post('roles')
-  @Permissions(PERMISSIONS.ADMIN_USERS)
-  @ApiOperation({ summary: 'Create role' })
-  async createRole(@Body() dto: { code: string; name: string; description?: string }) {
-    return this.usersService.createRole(dto);
-  }
-
-  @Put('roles/:id')
-  @Permissions(PERMISSIONS.ADMIN_USERS)
-  @ApiOperation({ summary: 'Update role' })
-  async updateRole(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body() dto: { name?: string; description?: string },
-  ) {
-    return this.usersService.updateRole(id, dto);
-  }
-
-  @Put('roles/:id/permissions')
-  @Permissions(PERMISSIONS.ADMIN_USERS)
-  @ApiOperation({ summary: 'Update role permissions' })
-  async updateRolePermissions(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body('permissionIds') permissionIds: string[],
-  ) {
-    return this.usersService.updateRolePermissions(id, permissionIds);
-  }
-
-  @Delete('roles/:id')
-  @Permissions(PERMISSIONS.ADMIN_USERS)
-  @ApiOperation({ summary: 'Delete role' })
-  async deleteRole(@Param('id', ParseUUIDPipe) id: string) {
-    return this.usersService.deleteRole(id);
-  }
-
-  @Get('permissions/all')
-  @ApiOperation({ summary: 'Get all permissions' })
-  async getAllPermissions() {
-    return this.usersService.getAllPermissions();
   }
 }
