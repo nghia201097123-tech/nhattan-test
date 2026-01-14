@@ -18,7 +18,16 @@ export class PermissionsGuard implements CanActivate {
 
     const { user } = context.switchToHttp().getRequest();
 
-    if (!user || !user.permissions) {
+    if (!user) {
+      return false;
+    }
+
+    // Admin role có tất cả quyền - bypass permission check
+    if (user.roles?.includes('ADMIN')) {
+      return true;
+    }
+
+    if (!user.permissions) {
       return false;
     }
 
