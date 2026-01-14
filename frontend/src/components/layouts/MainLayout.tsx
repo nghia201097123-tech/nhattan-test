@@ -102,6 +102,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
       key: 'profile',
       icon: <UserOutlined />,
       label: t.common.profile,
+      onClick: () => router.push('/profile'),
     },
     {
       type: 'divider' as const,
