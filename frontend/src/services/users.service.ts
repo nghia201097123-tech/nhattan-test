@@ -62,4 +62,23 @@ export const rolesService = {
     const response = await api.get<Permission[]>('/users/permissions/all');
     return response.data;
   },
+
+  async create(data: { code: string; name: string; description?: string }): Promise<Role> {
+    const response = await api.post<Role>('/users/roles', data);
+    return response.data;
+  },
+
+  async update(id: string, data: { name?: string; description?: string }): Promise<Role> {
+    const response = await api.put<Role>(`/users/roles/${id}`, data);
+    return response.data;
+  },
+
+  async updatePermissions(id: string, permissionIds: string[]): Promise<Role> {
+    const response = await api.put<Role>(`/users/roles/${id}/permissions`, { permissionIds });
+    return response.data;
+  },
+
+  async delete(id: string): Promise<void> {
+    await api.delete(`/users/roles/${id}`);
+  },
 };

@@ -82,7 +82,6 @@ export default function MainLayout({ children }: MainLayoutProps) {
       icon: <SettingOutlined />,
       label: t.menu.settings,
       children: [
-        { key: '/settings/users', label: t.menu.users },
         { key: '/settings/roles', label: t.menu.roles },
       ],
     },

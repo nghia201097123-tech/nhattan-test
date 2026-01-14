@@ -91,6 +91,40 @@ export class UsersController {
     return this.usersService.getAllRoles();
   }
 
+  @Post('roles')
+  @Permissions(PERMISSIONS.ADMIN_USERS)
+  @ApiOperation({ summary: 'Create role' })
+  async createRole(@Body() dto: { code: string; name: string; description?: string }) {
+    return this.usersService.createRole(dto);
+  }
+
+  @Put('roles/:id')
+  @Permissions(PERMISSIONS.ADMIN_USERS)
+  @ApiOperation({ summary: 'Update role' })
+  async updateRole(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: { name?: string; description?: string },
+  ) {
+    return this.usersService.updateRole(id, dto);
+  }
+
+  @Put('roles/:id/permissions')
+  @Permissions(PERMISSIONS.ADMIN_USERS)
+  @ApiOperation({ summary: 'Update role permissions' })
+  async updateRolePermissions(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body('permissionIds') permissionIds: string[],
+  ) {
+    return this.usersService.updateRolePermissions(id, permissionIds);
+  }
+
+  @Delete('roles/:id')
+  @Permissions(PERMISSIONS.ADMIN_USERS)
+  @ApiOperation({ summary: 'Delete role' })
+  async deleteRole(@Param('id', ParseUUIDPipe) id: string) {
+    return this.usersService.deleteRole(id);
+  }
+
   @Get('permissions/all')
   @ApiOperation({ summary: 'Get all permissions' })
   async getAllPermissions() {

@@ -131,6 +131,46 @@ export class UsersService {
     });
   }
 
+  async createRole(dto: { code: string; name: string; description?: string }): Promise<Role> {
+    const existing = await this.roleRepository.findOne({ where: { code: dto.code } });
+    if (existing) {
+      throw new BadRequestException('Role code already exists');
+    }
+    const role = this.roleRepository.create(dto);
+    return this.roleRepository.save(role);
+  }
+
+  async updateRole(id: string, dto: { name?: string; description?: string }): Promise<Role> {
+    const role = await this.roleRepository.findOne({ where: { id }, relations: ['permissions'] });
+    if (!role) {
+      throw new NotFoundException('Role not found');
+    }
+    Object.assign(role, dto);
+    return this.roleRepository.save(role);
+  }
+
+  async updateRolePermissions(id: string, permissionIds: string[]): Promise<Role> {
+    const role = await this.roleRepository.findOne({ where: { id }, relations: ['permissions'] });
+    if (!role) {
+      throw new NotFoundException('Role not found');
+    }
+    const permissions = await this.permissionRepository.findByIds(permissionIds);
+    role.permissions = permissions;
+    return this.roleRepository.save(role);
+  }
+
+  async deleteRole(id: string): Promise<{ message: string }> {
+    const role = await this.roleRepository.findOne({ where: { id } });
+    if (!role) {
+      throw new NotFoundException('Role not found');
+    }
+    if (role.code === 'ADMIN') {
+      throw new BadRequestException('Cannot delete ADMIN role');
+    }
+    await this.roleRepository.remove(role);
+    return { message: 'Role deleted successfully' };
+  }
+
   async getAllPermissions(): Promise<Permission[]> {
     return this.permissionRepository.find({
       order: { module: 'ASC', code: 'ASC' },
