@@ -9,11 +9,13 @@ interface AuthState {
   refreshToken: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  isHydrated: boolean;
   login: (username: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   loadUser: () => Promise<void>;
   setTokens: (accessToken: string, refreshToken: string) => void;
   hasPermission: (permissionCode: string) => boolean;
+  setHydrated: () => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -24,6 +26,9 @@ export const useAuthStore = create<AuthState>()(
       refreshToken: null,
       isAuthenticated: false,
       isLoading: false,
+      isHydrated: false,
+
+      setHydrated: () => set({ isHydrated: true }),
 
       login: async (username: string, password: string) => {
         set({ isLoading: true });
@@ -60,17 +65,25 @@ export const useAuthStore = create<AuthState>()(
       },
 
       loadUser: async () => {
+        const { user, isAuthenticated } = get();
+
+        // Nếu đã có user trong state, không cần gọi API
+        if (user && isAuthenticated) {
+          set({ isLoading: false });
+          return;
+        }
+
         const token = localStorage.getItem('accessToken');
         if (!token) {
-          set({ isAuthenticated: false, user: null });
+          set({ isAuthenticated: false, user: null, isLoading: false });
           return;
         }
 
         set({ isLoading: true });
         try {
-          const user = await authService.getProfile();
+          const userData = await authService.getProfile();
           set({
-            user,
+            user: userData,
             isAuthenticated: true,
             isLoading: false,
             accessToken: token,
@@ -107,9 +120,14 @@ export const useAuthStore = create<AuthState>()(
     {
       name: 'auth-storage',
       partialize: (state) => ({
+        user: state.user,
         accessToken: state.accessToken,
         refreshToken: state.refreshToken,
+        isAuthenticated: state.isAuthenticated,
       }),
+      onRehydrateStorage: () => (state) => {
+        state?.setHydrated();
+      },
     }
   )
 );
