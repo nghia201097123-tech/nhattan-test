@@ -4,31 +4,42 @@
 -- Run: psql -U seed_admin -d seed_management -f seed-admin.sql
 -- =====================================================
 
--- Tạo bảng nếu chưa tồn tại (TypeORM sẽ tự tạo, nhưng để đảm bảo)
--- Bỏ qua nếu đã có
-
 -- =====================================================
--- 1. Tạo Permissions (Quyền hạn)
+-- 1. Tạo Permissions (Quyền hạn) - Khớp với permissions.constant.ts
 -- =====================================================
 INSERT INTO permissions (id, code, name, module, created_at) VALUES
-  ('a1000000-0000-0000-0000-000000000001', 'users.view', 'Xem người dùng', 'users', NOW()),
-  ('a1000000-0000-0000-0000-000000000002', 'users.create', 'Tạo người dùng', 'users', NOW()),
-  ('a1000000-0000-0000-0000-000000000003', 'users.edit', 'Sửa người dùng', 'users', NOW()),
-  ('a1000000-0000-0000-0000-000000000004', 'users.delete', 'Xóa người dùng', 'users', NOW()),
-  ('a1000000-0000-0000-0000-000000000005', 'roles.view', 'Xem vai trò', 'roles', NOW()),
-  ('a1000000-0000-0000-0000-000000000006', 'roles.create', 'Tạo vai trò', 'roles', NOW()),
-  ('a1000000-0000-0000-0000-000000000007', 'roles.edit', 'Sửa vai trò', 'roles', NOW()),
-  ('a1000000-0000-0000-0000-000000000008', 'roles.delete', 'Xóa vai trò', 'roles', NOW()),
-  ('a1000000-0000-0000-0000-000000000009', 'samples.view', 'Xem mẫu giống', 'samples', NOW()),
-  ('a1000000-0000-0000-0000-000000000010', 'samples.create', 'Tạo mẫu giống', 'samples', NOW()),
-  ('a1000000-0000-0000-0000-000000000011', 'samples.edit', 'Sửa mẫu giống', 'samples', NOW()),
-  ('a1000000-0000-0000-0000-000000000012', 'samples.delete', 'Xóa mẫu giống', 'samples', NOW()),
-  ('a1000000-0000-0000-0000-000000000013', 'warehouse.view', 'Xem kho', 'warehouse', NOW()),
-  ('a1000000-0000-0000-0000-000000000014', 'warehouse.import', 'Nhập kho', 'warehouse', NOW()),
-  ('a1000000-0000-0000-0000-000000000015', 'warehouse.export', 'Xuất kho', 'warehouse', NOW()),
-  ('a1000000-0000-0000-0000-000000000016', 'catalog.view', 'Xem danh mục', 'catalog', NOW()),
-  ('a1000000-0000-0000-0000-000000000017', 'catalog.manage', 'Quản lý danh mục', 'catalog', NOW()),
-  ('a1000000-0000-0000-0000-000000000018', 'reports.view', 'Xem báo cáo', 'reports', NOW())
+  -- Catalog
+  ('a1000000-0000-0000-0000-000000000001', 'catalog.seed_category.read', 'Xem loại giống', 'catalog', NOW()),
+  ('a1000000-0000-0000-0000-000000000002', 'catalog.seed_category.create', 'Tạo loại giống', 'catalog', NOW()),
+  ('a1000000-0000-0000-0000-000000000003', 'catalog.seed_category.update', 'Sửa loại giống', 'catalog', NOW()),
+  ('a1000000-0000-0000-0000-000000000004', 'catalog.seed_category.delete', 'Xóa loại giống', 'catalog', NOW()),
+  ('a1000000-0000-0000-0000-000000000005', 'catalog.seed_variety.read', 'Xem giống cây', 'catalog', NOW()),
+  ('a1000000-0000-0000-0000-000000000006', 'catalog.seed_variety.create', 'Tạo giống cây', 'catalog', NOW()),
+  ('a1000000-0000-0000-0000-000000000007', 'catalog.seed_variety.update', 'Sửa giống cây', 'catalog', NOW()),
+  ('a1000000-0000-0000-0000-000000000008', 'catalog.seed_variety.delete', 'Xóa giống cây', 'catalog', NOW()),
+  ('a1000000-0000-0000-0000-000000000009', 'catalog.warehouse.read', 'Xem kho', 'catalog', NOW()),
+  ('a1000000-0000-0000-0000-000000000010', 'catalog.warehouse.create', 'Tạo kho', 'catalog', NOW()),
+  ('a1000000-0000-0000-0000-000000000011', 'catalog.warehouse.update', 'Sửa kho', 'catalog', NOW()),
+  ('a1000000-0000-0000-0000-000000000012', 'catalog.warehouse.delete', 'Xóa kho', 'catalog', NOW()),
+  -- Samples
+  ('a1000000-0000-0000-0000-000000000013', 'sample.read', 'Xem mẫu giống', 'sample', NOW()),
+  ('a1000000-0000-0000-0000-000000000014', 'sample.create', 'Tạo phiếu thu thập', 'sample', NOW()),
+  ('a1000000-0000-0000-0000-000000000015', 'sample.update', 'Sửa thông tin mẫu', 'sample', NOW()),
+  ('a1000000-0000-0000-0000-000000000016', 'sample.delete', 'Xóa mẫu', 'sample', NOW()),
+  ('a1000000-0000-0000-0000-000000000017', 'sample.evaluate', 'Đánh giá mẫu', 'sample', NOW()),
+  ('a1000000-0000-0000-0000-000000000018', 'sample.propagate', 'Quản lý nhân mẫu', 'sample', NOW()),
+  -- Warehouse
+  ('a1000000-0000-0000-0000-000000000019', 'warehouse.receipt.create', 'Tạo phiếu nhập', 'warehouse', NOW()),
+  ('a1000000-0000-0000-0000-000000000020', 'warehouse.receipt.confirm', 'Xác nhận nhập kho', 'warehouse', NOW()),
+  ('a1000000-0000-0000-0000-000000000021', 'warehouse.export.create', 'Tạo phiếu xuất', 'warehouse', NOW()),
+  ('a1000000-0000-0000-0000-000000000022', 'warehouse.export.approve', 'Duyệt phiếu xuất', 'warehouse', NOW()),
+  ('a1000000-0000-0000-0000-000000000023', 'warehouse.transfer.create', 'Tạo phiếu chuyển', 'warehouse', NOW()),
+  -- Reports
+  ('a1000000-0000-0000-0000-000000000024', 'report.view', 'Xem báo cáo', 'report', NOW()),
+  ('a1000000-0000-0000-0000-000000000025', 'report.export', 'Xuất báo cáo', 'report', NOW()),
+  -- Admin
+  ('a1000000-0000-0000-0000-000000000026', 'admin.users', 'Quản lý users', 'admin', NOW()),
+  ('a1000000-0000-0000-0000-000000000027', 'admin.config', 'Cấu hình hệ thống', 'admin', NOW())
 ON CONFLICT (id) DO NOTHING;
 
 -- =====================================================
@@ -44,25 +55,8 @@ ON CONFLICT (id) DO NOTHING;
 -- =====================================================
 -- 3. Gán quyền cho vai trò Admin (tất cả quyền)
 -- =====================================================
-INSERT INTO role_permissions (role_id, permission_id) VALUES
-  ('b1000000-0000-0000-0000-000000000001', 'a1000000-0000-0000-0000-000000000001'),
-  ('b1000000-0000-0000-0000-000000000001', 'a1000000-0000-0000-0000-000000000002'),
-  ('b1000000-0000-0000-0000-000000000001', 'a1000000-0000-0000-0000-000000000003'),
-  ('b1000000-0000-0000-0000-000000000001', 'a1000000-0000-0000-0000-000000000004'),
-  ('b1000000-0000-0000-0000-000000000001', 'a1000000-0000-0000-0000-000000000005'),
-  ('b1000000-0000-0000-0000-000000000001', 'a1000000-0000-0000-0000-000000000006'),
-  ('b1000000-0000-0000-0000-000000000001', 'a1000000-0000-0000-0000-000000000007'),
-  ('b1000000-0000-0000-0000-000000000001', 'a1000000-0000-0000-0000-000000000008'),
-  ('b1000000-0000-0000-0000-000000000001', 'a1000000-0000-0000-0000-000000000009'),
-  ('b1000000-0000-0000-0000-000000000001', 'a1000000-0000-0000-0000-000000000010'),
-  ('b1000000-0000-0000-0000-000000000001', 'a1000000-0000-0000-0000-000000000011'),
-  ('b1000000-0000-0000-0000-000000000001', 'a1000000-0000-0000-0000-000000000012'),
-  ('b1000000-0000-0000-0000-000000000001', 'a1000000-0000-0000-0000-000000000013'),
-  ('b1000000-0000-0000-0000-000000000001', 'a1000000-0000-0000-0000-000000000014'),
-  ('b1000000-0000-0000-0000-000000000001', 'a1000000-0000-0000-0000-000000000015'),
-  ('b1000000-0000-0000-0000-000000000001', 'a1000000-0000-0000-0000-000000000016'),
-  ('b1000000-0000-0000-0000-000000000001', 'a1000000-0000-0000-0000-000000000017'),
-  ('b1000000-0000-0000-0000-000000000001', 'a1000000-0000-0000-0000-000000000018')
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT 'b1000000-0000-0000-0000-000000000001', id FROM permissions
 ON CONFLICT DO NOTHING;
 
 -- =====================================================

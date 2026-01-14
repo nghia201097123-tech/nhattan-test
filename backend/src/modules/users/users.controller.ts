@@ -75,6 +75,16 @@ export class UsersController {
     return this.usersService.assignRoles(id, roleIds);
   }
 
+  @Put(':id/reset-password')
+  @Permissions(PERMISSIONS.ADMIN_USERS)
+  @ApiOperation({ summary: 'Reset user password' })
+  async resetPassword(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body('newPassword') newPassword: string,
+  ) {
+    return this.usersService.resetPassword(id, newPassword);
+  }
+
   @Get('roles/all')
   @ApiOperation({ summary: 'Get all roles' })
   async getAllRoles() {

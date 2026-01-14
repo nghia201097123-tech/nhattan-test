@@ -109,6 +109,13 @@ export class UsersService {
     await this.userRepository.update(id, { passwordHash });
   }
 
+  async resetPassword(id: string, newPassword: string): Promise<{ message: string }> {
+    await this.findById(id); // Check if user exists
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+    await this.userRepository.update(id, { passwordHash });
+    return { message: 'Password reset successfully' };
+  }
+
   async assignRoles(id: string, roleIds: string[]): Promise<User> {
     const user = await this.findById(id);
     const roles = await this.roleRepository.findByIds(roleIds);
