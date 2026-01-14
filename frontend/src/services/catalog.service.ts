@@ -133,14 +133,16 @@ export const warehousesService = {
 export const storageLocationsService = {
   async getByWarehouse(warehouseId: string): Promise<StorageLocation[]> {
     const response = await api.get<StorageLocation[]>(
-      `/catalog/storage-locations/warehouse/${warehouseId}`
+      '/catalog/storage-locations',
+      { params: { warehouseId } }
     );
     return response.data;
   },
 
   async getTree(warehouseId: string): Promise<StorageLocation[]> {
     const response = await api.get<StorageLocation[]>(
-      `/catalog/storage-locations/tree/${warehouseId}`
+      '/catalog/storage-locations/tree',
+      { params: { warehouseId } }
     );
     return response.data;
   },

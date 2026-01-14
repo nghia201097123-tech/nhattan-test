@@ -93,11 +93,6 @@ export const exportsService = {
     return response.data;
   },
 
-  async execute(id: string): Promise<WarehouseExport> {
-    const response = await api.post<WarehouseExport>(`/warehouse/exports/${id}/execute`);
-    return response.data;
-  },
-
   async delete(id: string): Promise<void> {
     await api.delete(`/warehouse/exports/${id}`);
   },
@@ -108,7 +103,7 @@ export const inventoryService = {
     params?: PaginationParams & {
       warehouseId?: string;
       sampleId?: string;
-      transactionType?: 'IN' | 'OUT';
+      transactionType?: 'IMPORT' | 'EXPORT';
       fromDate?: string;
       toDate?: string;
     }
