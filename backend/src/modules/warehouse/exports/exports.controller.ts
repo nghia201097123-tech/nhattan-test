@@ -12,13 +12,10 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { ExportsService } from './exports.service';
-import { CreateExportDto } from './dto/create-export.dto';
-import { UpdateExportDto } from './dto/update-export.dto';
-import { ApproveExportDto, RejectExportDto } from './dto/approve-export.dto';
 import { PaginationDto } from '../../../common/dto/pagination.dto';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../../common/decorators/current-user.decorator';
-import { ExportStatus } from './entities/warehouse-export.entity';
+import { ExportStatus } from '../../../shared/constants/export-status.constant';
 
 @ApiTags('Warehouse - Exports')
 @ApiBearerAuth()
@@ -48,33 +45,30 @@ export class ExportsController {
 
   @Post()
   @ApiOperation({ summary: 'Create export request' })
-  async create(
-    @Body() dto: CreateExportDto,
-    @CurrentUser('id') userId: string,
-  ) {
+  async create(@Body() dto: any, @CurrentUser('id') userId: string) {
     return this.service.create(dto, userId);
   }
 
   @Put(':id')
   @ApiOperation({ summary: 'Update export' })
-  async update(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body() dto: UpdateExportDto,
-  ) {
+  async update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: any) {
     return this.service.update(id, dto);
   }
 
   @Post(':id/submit')
   @ApiOperation({ summary: 'Submit export for approval' })
-  async submitForApproval(@Param('id', ParseUUIDPipe) id: string) {
-    return this.service.submitForApproval(id);
+  async submitForApproval(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser('id') userId: string,
+  ) {
+    return this.service.submitForApproval(id, userId);
   }
 
   @Post(':id/approve')
   @ApiOperation({ summary: 'Approve export' })
   async approve(
     @Param('id', ParseUUIDPipe) id: string,
-    @Body() dto: ApproveExportDto,
+    @Body() dto: { notes?: string },
     @CurrentUser('id') userId: string,
   ) {
     return this.service.approve(id, userId, dto.notes);
@@ -84,19 +78,10 @@ export class ExportsController {
   @ApiOperation({ summary: 'Reject export' })
   async reject(
     @Param('id', ParseUUIDPipe) id: string,
-    @Body() dto: RejectExportDto,
+    @Body() dto: { rejectReason?: string },
     @CurrentUser('id') userId: string,
   ) {
     return this.service.reject(id, userId, dto.rejectReason);
-  }
-
-  @Post(':id/execute')
-  @ApiOperation({ summary: 'Execute export (actually export items)' })
-  async executeExport(
-    @Param('id', ParseUUIDPipe) id: string,
-    @CurrentUser('id') userId: string,
-  ) {
-    return this.service.executeExport(id, userId);
   }
 
   @Delete(':id')

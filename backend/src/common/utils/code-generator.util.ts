@@ -1,24 +1,34 @@
-export function generateCode(prefix: string, sequence: number, padLength = 6): string {
+export function generateCode(prefix: string, lastCode?: string, padLength = 6): string {
   const year = new Date().getFullYear();
+  let sequence = 1;
+
+  if (lastCode) {
+    // Extract sequence from lastCode (format: PREFIX + YEAR + SEQUENCE)
+    const numericPart = lastCode.replace(/\D/g, '');
+    if (numericPart.length > 4) {
+      sequence = parseInt(numericPart.slice(4), 10) + 1;
+    }
+  }
+
   return `${prefix}${year}${sequence.toString().padStart(padLength, '0')}`;
 }
 
-export function generateReceiptNumber(sequence: number): string {
-  return generateCode('PN', sequence); // Phieu Nhap
+export function generateReceiptNumber(lastCode?: string): string {
+  return generateCode('PN', lastCode); // Phieu Nhap
 }
 
-export function generateExportNumber(sequence: number): string {
-  return generateCode('PX', sequence); // Phieu Xuat
+export function generateExportNumber(lastCode?: string): string {
+  return generateCode('PX', lastCode); // Phieu Xuat
 }
 
-export function generateTransferNumber(sequence: number): string {
-  return generateCode('PC', sequence); // Phieu Chuyen
+export function generateTransferNumber(lastCode?: string): string {
+  return generateCode('PC', lastCode); // Phieu Chuyen
 }
 
-export function generateSampleCode(sequence: number): string {
-  return generateCode('SM', sequence); // Sample
+export function generateSampleCode(lastCode?: string): string {
+  return generateCode('SM', lastCode); // Sample
 }
 
-export function generateBatchCode(sequence: number): string {
-  return generateCode('DN', sequence); // Dot Nhan
+export function generateBatchCode(lastCode?: string): string {
+  return generateCode('DN', lastCode); // Dot Nhan
 }

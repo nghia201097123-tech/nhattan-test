@@ -12,17 +12,6 @@ export interface InventoryQueryDto extends PaginationDto {
   toDate?: string;
 }
 
-export interface StockSummary {
-  sampleId: string;
-  sampleCode: string;
-  sampleName: string;
-  warehouseId: string;
-  warehouseName: string;
-  totalIn: number;
-  totalOut: number;
-  currentStock: number;
-}
-
 @Injectable()
 export class InventoryService {
   constructor(
@@ -38,7 +27,7 @@ export class InventoryService {
       .createQueryBuilder('tx')
       .leftJoinAndSelect('tx.sample', 'sample')
       .leftJoinAndSelect('tx.warehouse', 'warehouse')
-      .leftJoinAndSelect('tx.storageLocation', 'storageLocation');
+      .leftJoinAndSelect('tx.location', 'location');
 
     if (warehouseId) {
       queryBuilder.andWhere('tx.warehouseId = :warehouseId', { warehouseId });
@@ -60,17 +49,13 @@ export class InventoryService {
       queryBuilder.andWhere('tx.transactionDate <= :toDate', { toDate });
     }
 
-    queryBuilder
-      .orderBy(`tx.${sortBy}`, sortOrder)
-      .skip(skip)
-      .take(limit);
+    queryBuilder.orderBy(`tx.${sortBy}`, sortOrder).skip(skip).take(limit);
 
     const [data, total] = await queryBuilder.getManyAndCount();
-
     return createPaginatedResult(data, total, page, limit);
   }
 
-  async getStockBySample(sampleId: string): Promise<StockSummary[]> {
+  async getStockBySample(sampleId: string) {
     const result = await this.repository
       .createQueryBuilder('tx')
       .select('tx.sampleId', 'sampleId')
@@ -78,14 +63,8 @@ export class InventoryService {
       .addSelect('sample.sampleName', 'sampleName')
       .addSelect('tx.warehouseId', 'warehouseId')
       .addSelect('warehouse.name', 'warehouseName')
-      .addSelect(
-        `SUM(CASE WHEN tx.transactionType = 'IN' THEN tx.quantity ELSE 0 END)`,
-        'totalIn',
-      )
-      .addSelect(
-        `SUM(CASE WHEN tx.transactionType = 'OUT' THEN tx.quantity ELSE 0 END)`,
-        'totalOut',
-      )
+      .addSelect(`SUM(CASE WHEN tx.transactionType = 'IMPORT' THEN tx.quantity ELSE 0 END)`, 'totalIn')
+      .addSelect(`SUM(CASE WHEN tx.transactionType = 'EXPORT' THEN tx.quantity ELSE 0 END)`, 'totalOut')
       .leftJoin('tx.sample', 'sample')
       .leftJoin('tx.warehouse', 'warehouse')
       .where('tx.sampleId = :sampleId', { sampleId })
@@ -104,7 +83,7 @@ export class InventoryService {
     }));
   }
 
-  async getStockByWarehouse(warehouseId: string): Promise<StockSummary[]> {
+  async getStockByWarehouse(warehouseId: string) {
     const result = await this.repository
       .createQueryBuilder('tx')
       .select('tx.sampleId', 'sampleId')
@@ -112,14 +91,8 @@ export class InventoryService {
       .addSelect('sample.sampleName', 'sampleName')
       .addSelect('tx.warehouseId', 'warehouseId')
       .addSelect('warehouse.name', 'warehouseName')
-      .addSelect(
-        `SUM(CASE WHEN tx.transactionType = 'IN' THEN tx.quantity ELSE 0 END)`,
-        'totalIn',
-      )
-      .addSelect(
-        `SUM(CASE WHEN tx.transactionType = 'OUT' THEN tx.quantity ELSE 0 END)`,
-        'totalOut',
-      )
+      .addSelect(`SUM(CASE WHEN tx.transactionType = 'IMPORT' THEN tx.quantity ELSE 0 END)`, 'totalIn')
+      .addSelect(`SUM(CASE WHEN tx.transactionType = 'EXPORT' THEN tx.quantity ELSE 0 END)`, 'totalOut')
       .leftJoin('tx.sample', 'sample')
       .leftJoin('tx.warehouse', 'warehouse')
       .where('tx.warehouseId = :warehouseId', { warehouseId })
@@ -128,9 +101,6 @@ export class InventoryService {
       .addGroupBy('sample.sampleName')
       .addGroupBy('tx.warehouseId')
       .addGroupBy('warehouse.name')
-      .having(
-        `SUM(CASE WHEN tx.transactionType = 'IN' THEN tx.quantity ELSE 0 END) - SUM(CASE WHEN tx.transactionType = 'OUT' THEN tx.quantity ELSE 0 END) > 0`,
-      )
       .getRawMany();
 
     return result.map((r) => ({
@@ -146,7 +116,7 @@ export class InventoryService {
       .createQueryBuilder('tx')
       .leftJoinAndSelect('tx.sample', 'sample')
       .leftJoinAndSelect('tx.warehouse', 'warehouse')
-      .leftJoinAndSelect('tx.storageLocation', 'storageLocation')
+      .leftJoinAndSelect('tx.location', 'location')
       .where('tx.sampleId = :sampleId', { sampleId });
 
     if (warehouseId) {
@@ -154,21 +124,16 @@ export class InventoryService {
     }
 
     queryBuilder.orderBy('tx.transactionDate', 'ASC');
-
     const transactions = await queryBuilder.getMany();
 
-    // Calculate running balance
     let balance = 0;
     return transactions.map((tx) => {
-      if (tx.transactionType === TransactionType.IN) {
-        balance += tx.quantity;
-      } else {
-        balance -= tx.quantity;
+      if (tx.transactionType === TransactionType.IMPORT) {
+        balance += Number(tx.quantity);
+      } else if (tx.transactionType === TransactionType.EXPORT) {
+        balance -= Number(tx.quantity);
       }
-      return {
-        ...tx,
-        balance,
-      };
+      return { ...tx, balance };
     });
   }
 }

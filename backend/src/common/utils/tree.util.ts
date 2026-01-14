@@ -28,10 +28,10 @@ export function flattenTree<T extends TreeNode>(tree: T[]): T[] {
   const result: T[] = [];
 
   for (const node of tree) {
-    const { children, ...rest } = node as any;
-    result.push(rest);
+    const { children, ...rest } = node;
+    result.push(rest as T);
     if (children && children.length > 0) {
-      result.push(...flattenTree(children));
+      result.push(...flattenTree(children as T[]));
     }
   }
 

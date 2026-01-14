@@ -82,22 +82,12 @@ export class CollectionService {
   }
 
   async generateCode(): Promise<{ code: string }> {
-    const year = new Date().getFullYear();
-    const prefix = 'SM';
-
     const lastSample = await this.repository
       .createQueryBuilder('sample')
-      .where('sample.code LIKE :pattern', { pattern: `${prefix}${year}%` })
       .orderBy('sample.code', 'DESC')
       .getOne();
 
-    let sequence = 1;
-    if (lastSample) {
-      const lastSequence = parseInt(lastSample.code.slice(-6));
-      sequence = lastSequence + 1;
-    }
-
-    return { code: generateSampleCode(sequence) };
+    return { code: generateSampleCode(lastSample?.code) };
   }
 
   async getHistory(id: string) {

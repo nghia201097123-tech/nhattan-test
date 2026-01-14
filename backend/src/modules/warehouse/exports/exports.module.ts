@@ -4,18 +4,9 @@ import { ExportsController } from './exports.controller';
 import { ExportsService } from './exports.service';
 import { WarehouseExport } from './entities/warehouse-export.entity';
 import { WarehouseExportItem } from './entities/warehouse-export-item.entity';
-import { InventoryTransaction } from '../inventory/entities/inventory-transaction.entity';
-import { Sample } from '../../samples/collection/entities/sample.entity';
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([
-      WarehouseExport,
-      WarehouseExportItem,
-      InventoryTransaction,
-      Sample,
-    ]),
-  ],
+  imports: [TypeOrmModule.forFeature([WarehouseExport, WarehouseExportItem])],
   controllers: [ExportsController],
   providers: [ExportsService],
   exports: [ExportsService],

@@ -12,8 +12,6 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { ReceiptsService } from './receipts.service';
-import { CreateReceiptDto } from './dto/create-receipt.dto';
-import { UpdateReceiptDto } from './dto/update-receipt.dto';
 import { PaginationDto } from '../../../common/dto/pagination.dto';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../../common/decorators/current-user.decorator';
@@ -46,19 +44,13 @@ export class ReceiptsController {
 
   @Post()
   @ApiOperation({ summary: 'Create receipt' })
-  async create(
-    @Body() dto: CreateReceiptDto,
-    @CurrentUser('id') userId: string,
-  ) {
+  async create(@Body() dto: any, @CurrentUser('id') userId: string) {
     return this.service.create(dto, userId);
   }
 
   @Put(':id')
   @ApiOperation({ summary: 'Update receipt' })
-  async update(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body() dto: UpdateReceiptDto,
-  ) {
+  async update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: any) {
     return this.service.update(id, dto);
   }
 
