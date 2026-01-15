@@ -59,7 +59,6 @@ export default function VarietiesPage() {
       const items = Array.isArray(result) ? result : (result.data || result.items || []);
       setData(items);
     } catch (error) {
-      console.error(error);
       message.error('Không thể tải danh sách giống');
     } finally {
       setLoading(false);
@@ -73,7 +72,7 @@ export default function VarietiesPage() {
       // Chỉ lấy các nhóm đang hoạt động cho form
       setActiveCategories(result.filter((c: any) => c.isActive));
     } catch (error) {
-      console.error(error);
+      // Silently fail - categories list is non-critical
     }
   };
 
@@ -172,7 +171,6 @@ export default function VarietiesPage() {
             );
 
             if (!category) {
-              console.warn(`Không tìm thấy nhóm giống: ${row['Nhóm giống']}`);
               errorCount++;
               continue;
             }
@@ -193,16 +191,14 @@ export default function VarietiesPage() {
 
             await seedVarietiesService.create(varietyData);
             successCount++;
-          } catch (err) {
-            console.error('Error importing row:', err);
+          } catch {
             errorCount++;
           }
         }
 
         message.success(`Import hoàn tất: ${successCount} thành công, ${errorCount} lỗi`);
         fetchData();
-      } catch (error) {
-        console.error('Import error:', error);
+      } catch {
         message.error('Lỗi khi đọc file Excel');
       }
     };

@@ -58,21 +58,16 @@ export default function CategoriesPage() {
   const [form] = Form.useForm();
 
   const fetchData = async () => {
-    console.log('=== FETCH DATA START ===');
     setLoading(true);
     try {
       const [treeResult, allResult] = await Promise.all([
         seedCategoriesService.getTree(),
         seedCategoriesService.getAll(),
       ]);
-      console.log('Tree result:', JSON.stringify(treeResult, null, 2));
-      console.log('Flat result:', allResult.map(i => ({ id: i.id, name: i.name, parentId: i.parentId })));
       setData(treeResult);
       setFlatData(allResult);
-      setRefreshKey((prev) => prev + 1); // Increment to force Tree re-render
-      console.log('=== FETCH DATA DONE ===');
+      setRefreshKey((prev) => prev + 1);
     } catch (error) {
-      console.error('Fetch error:', error);
       message.error('Không thể tải dữ liệu');
     } finally {
       setLoading(false);
@@ -94,24 +89,16 @@ export default function CategoriesPage() {
 
   const handleSubmit = async (values: any) => {
     try {
-      // Ensure parentId is explicitly null if not set (not undefined)
       const payload = {
         ...values,
-        parentId: values.parentId ?? null, // Use ?? instead of || to handle empty string properly
+        parentId: values.parentId ?? null,
       };
 
-      console.log('=== SUBMIT FORM ===');
-      console.log('Form values:', values);
-      console.log('Payload to send:', payload);
-      console.log('Editing item:', editingItem);
-
       if (editingItem) {
-        const result = await seedCategoriesService.update(editingItem.id, payload);
-        console.log('Update result:', result);
+        await seedCategoriesService.update(editingItem.id, payload);
         message.success('Cập nhật thành công');
       } else {
-        const result = await seedCategoriesService.create(payload);
-        console.log('Create result:', result);
+        await seedCategoriesService.create(payload);
         message.success('Thêm mới thành công');
       }
       setModalOpen(false);
@@ -119,7 +106,6 @@ export default function CategoriesPage() {
       setEditingItem(null);
       fetchData();
     } catch (error: any) {
-      console.error('Submit error:', error);
       message.error(error.response?.data?.message || 'Có lỗi xảy ra');
     }
   };

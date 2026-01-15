@@ -49,7 +49,7 @@ export class SeedVarietiesService {
     });
 
     if (!variety) {
-      throw new NotFoundException('Seed variety not found');
+      throw new NotFoundException('Không tìm thấy giống');
     }
 
     return variety;
@@ -58,7 +58,7 @@ export class SeedVarietiesService {
   async create(dto: CreateSeedVarietyDto, userId: string): Promise<SeedVariety> {
     const existing = await this.repository.findOne({ where: { code: dto.code } });
     if (existing) {
-      throw new BadRequestException('Variety code already exists');
+      throw new BadRequestException('Mã giống đã tồn tại');
     }
 
     const variety = this.repository.create({
@@ -75,7 +75,7 @@ export class SeedVarietiesService {
     if (dto.code && dto.code !== variety.code) {
       const existing = await this.repository.findOne({ where: { code: dto.code } });
       if (existing) {
-        throw new BadRequestException('Variety code already exists');
+        throw new BadRequestException('Mã giống đã tồn tại');
       }
     }
 
