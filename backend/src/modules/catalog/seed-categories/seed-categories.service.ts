@@ -110,6 +110,7 @@ export class SeedCategoriesService {
         // Moving to root level
         console.log('Moving to root level');
         category.parentId = null;
+        category.parent = null; // IMPORTANT: Also set the relation to null
         category.level = 1;
         category.path = generatePath(null, category.id);
       } else {
@@ -122,6 +123,7 @@ export class SeedCategoriesService {
         }
 
         category.parentId = newParentId;
+        category.parent = newParent; // IMPORTANT: Also set the relation object
         category.level = newParent.level + 1;
         category.path = generatePath(newParent.path, category.id);
         console.log('Updated to level:', category.level, 'path:', category.path);
