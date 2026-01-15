@@ -91,8 +91,52 @@ export class SeedCategoriesService {
       }
     }
 
-    Object.assign(category, dto, { updatedBy: userId });
+    // Handle parentId change
+    if (dto.parentId !== undefined && dto.parentId !== category.parentId) {
+      if (dto.parentId === null || dto.parentId === '') {
+        // Moving to root level
+        category.parentId = null;
+        category.level = 1;
+        category.path = `/${category.id}`;
+      } else {
+        // Check if new parent is not a descendant of current category (prevent circular reference)
+        const newParent = await this.findById(dto.parentId);
+        if (newParent.path && newParent.path.includes(`/${id}/`)) {
+          throw new BadRequestException('Không thể chọn nhóm con làm nhóm cha');
+        }
+
+        category.parentId = dto.parentId;
+        category.level = newParent.level + 1;
+        category.path = generatePath(newParent.path, category.id);
+      }
+
+      // Update all descendants' level and path
+      await this.updateDescendants(category);
+    }
+
+    // Update other fields
+    if (dto.code !== undefined) category.code = dto.code;
+    if (dto.name !== undefined) category.name = dto.name;
+    if (dto.description !== undefined) category.description = dto.description;
+    if (dto.sortOrder !== undefined) category.sortOrder = dto.sortOrder;
+    if (dto.isActive !== undefined) category.isActive = dto.isActive;
+    category.updatedBy = userId;
+
     return this.repository.save(category);
+  }
+
+  private async updateDescendants(parent: SeedCategory): Promise<void> {
+    const children = await this.repository.find({
+      where: { parentId: parent.id },
+    });
+
+    for (const child of children) {
+      child.level = parent.level + 1;
+      child.path = generatePath(parent.path, child.id);
+      await this.repository.save(child);
+      // Recursively update grandchildren
+      await this.updateDescendants(child);
+    }
   }
 
   async remove(id: string): Promise<void> {

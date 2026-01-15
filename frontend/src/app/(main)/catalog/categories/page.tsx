@@ -143,9 +143,25 @@ export default function CategoriesPage() {
     setDetailModalOpen(true);
   };
 
+  // Get all descendant IDs of a category
+  const getDescendantIds = (parentId: string): string[] => {
+    const descendants: string[] = [];
+    const children = flatData.filter((item) => item.parentId === parentId);
+    for (const child of children) {
+      descendants.push(child.id);
+      descendants.push(...getDescendantIds(child.id));
+    }
+    return descendants;
+  };
+
   const getParentOptions = () => {
+    // When editing, exclude the item itself and all its descendants
+    const excludeIds = editingItem
+      ? [editingItem.id, ...getDescendantIds(editingItem.id)]
+      : [];
+
     return flatData
-      .filter((item) => !editingItem || item.id !== editingItem.id)
+      .filter((item) => !excludeIds.includes(item.id))
       .map((item) => ({
         label: `${'—'.repeat(Math.max(0, (item.level || 1) - 1))} ${item.name}`,
         value: item.id,
