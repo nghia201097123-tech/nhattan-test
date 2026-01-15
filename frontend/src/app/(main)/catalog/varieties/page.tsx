@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   Card,
   Table,
@@ -14,14 +14,19 @@ import {
   Popconfirm,
   Tag,
   Typography,
+  Upload,
+  Divider,
 } from 'antd';
 import {
   PlusOutlined,
   EditOutlined,
   DeleteOutlined,
   SearchOutlined,
+  UploadOutlined,
+  DownloadOutlined,
 } from '@ant-design/icons';
 import { seedVarietiesService, seedCategoriesService } from '@/services/catalog.service';
+import * as XLSX from 'xlsx';
 
 const { Title } = Typography;
 const { TextArea } = Input;
@@ -29,12 +34,15 @@ const { TextArea } = Input;
 export default function VarietiesPage() {
   const [data, setData] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
+  const [activeCategories, setActiveCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
   const [searchText, setSearchText] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>();
+  const [selectedStatus, setSelectedStatus] = useState<string>();
   const [form] = Form.useForm();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const fetchData = async () => {
     setLoading(true);
@@ -52,6 +60,8 @@ export default function VarietiesPage() {
     try {
       const result = await seedCategoriesService.getAll();
       setCategories(result);
+      // Chỉ lấy các nhóm đang hoạt động cho form
+      setActiveCategories(result.filter((c: any) => c.isActive));
     } catch (error) {
       console.error(error);
     }
@@ -68,7 +78,9 @@ export default function VarietiesPage() {
   const handleSubmit = async (values: any) => {
     try {
       if (editingItem) {
-        await seedVarietiesService.update(editingItem.id, values);
+        // Khi edit, không gửi code
+        const { code, ...updateData } = values;
+        await seedVarietiesService.update(editingItem.id, updateData);
         message.success('Cập nhật thành công');
       } else {
         await seedVarietiesService.create(values);
@@ -93,11 +105,125 @@ export default function VarietiesPage() {
     }
   };
 
-  const filteredData = data.filter(
-    (item) =>
+  // Filter data
+  const filteredData = data.filter((item) => {
+    const matchSearch =
       item.name?.toLowerCase().includes(searchText.toLowerCase()) ||
-      item.code?.toLowerCase().includes(searchText.toLowerCase())
-  );
+      item.code?.toLowerCase().includes(searchText.toLowerCase());
+    const matchStatus =
+      selectedStatus === undefined ||
+      (selectedStatus === 'active' && item.isActive) ||
+      (selectedStatus === 'inactive' && !item.isActive);
+    return matchSearch && matchStatus;
+  });
+
+  // Export Excel
+  const handleExport = () => {
+    const exportData = filteredData.map((item) => ({
+      'Mã giống': item.code,
+      'Tên giống': item.name,
+      'Tên khoa học': item.scientificName || '',
+      'Tên địa phương': item.localName || '',
+      'Nhóm giống': item.category?.name || '',
+      'Xuất xứ': item.origin || '',
+      'Thời gian sinh trưởng': item.growthDuration || '',
+      'Đặc điểm': item.characteristics || '',
+      'Năng suất tiềm năng': item.yieldPotential || '',
+      'Khả năng chống bệnh': item.diseaseResistance || '',
+      'Trạng thái': item.isActive ? 'Hoạt động' : 'Ngừng',
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Danh sách giống');
+    XLSX.writeFile(wb, `danh-sach-giong-${new Date().toISOString().split('T')[0]}.xlsx`);
+    message.success('Xuất Excel thành công');
+  };
+
+  // Import Excel
+  const handleImport = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      try {
+        const data = e.target?.result;
+        const workbook = XLSX.read(data, { type: 'binary' });
+        const sheetName = workbook.SheetNames[0];
+        const sheet = workbook.Sheets[sheetName];
+        const jsonData = XLSX.utils.sheet_to_json(sheet);
+
+        let successCount = 0;
+        let errorCount = 0;
+
+        for (const row of jsonData as any[]) {
+          try {
+            // Tìm category theo tên
+            const category = categories.find(
+              (c) => c.name?.toLowerCase() === row['Nhóm giống']?.toLowerCase()
+            );
+
+            if (!category) {
+              console.warn(`Không tìm thấy nhóm giống: ${row['Nhóm giống']}`);
+              errorCount++;
+              continue;
+            }
+
+            const varietyData = {
+              code: row['Mã giống'],
+              name: row['Tên giống'],
+              scientificName: row['Tên khoa học'] || null,
+              localName: row['Tên địa phương'] || null,
+              categoryId: category.id,
+              origin: row['Xuất xứ'] || null,
+              growthDuration: row['Thời gian sinh trưởng'] || null,
+              characteristics: row['Đặc điểm'] || null,
+              yieldPotential: row['Năng suất tiềm năng'] || null,
+              diseaseResistance: row['Khả năng chống bệnh'] || null,
+              isActive: row['Trạng thái'] !== 'Ngừng',
+            };
+
+            await seedVarietiesService.create(varietyData);
+            successCount++;
+          } catch (err) {
+            console.error('Error importing row:', err);
+            errorCount++;
+          }
+        }
+
+        message.success(`Import hoàn tất: ${successCount} thành công, ${errorCount} lỗi`);
+        fetchData();
+      } catch (error) {
+        console.error('Import error:', error);
+        message.error('Lỗi khi đọc file Excel');
+      }
+    };
+    reader.readAsBinaryString(file);
+    return false; // Prevent upload
+  };
+
+  // Download template
+  const handleDownloadTemplate = () => {
+    const templateData = [
+      {
+        'Mã giống': 'VD_001',
+        'Tên giống': 'Giống mẫu',
+        'Tên khoa học': 'Oryza sativa',
+        'Tên địa phương': 'Lúa địa phương',
+        'Nhóm giống': 'LÚA KHÔ', // Tên nhóm giống
+        'Xuất xứ': 'Việt Nam',
+        'Thời gian sinh trưởng': '90-100 ngày',
+        'Đặc điểm': 'Hạt gạo dài, thơm',
+        'Năng suất tiềm năng': '6-8 tấn/ha',
+        'Khả năng chống bệnh': 'Kháng đạo ôn',
+        'Trạng thái': 'Hoạt động',
+      },
+    ];
+
+    const ws = XLSX.utils.json_to_sheet(templateData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Template');
+    XLSX.writeFile(wb, 'template-import-giong.xlsx');
+    message.success('Tải template thành công');
+  };
 
   const columns = [
     { title: 'Mã giống', dataIndex: 'code', key: 'code', width: 120 },
@@ -129,7 +255,10 @@ export default function VarietiesPage() {
             icon={<EditOutlined />}
             onClick={() => {
               setEditingItem(record);
-              form.setFieldsValue(record);
+              form.setFieldsValue({
+                ...record,
+                categoryId: record.category?.id || record.categoryId,
+              });
               setModalOpen(true);
             }}
           />
@@ -150,21 +279,36 @@ export default function VarietiesPage() {
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
         <Title level={4}>Danh mục giống</Title>
-        <Button
-          type="primary"
-          icon={<PlusOutlined />}
-          onClick={() => {
-            setEditingItem(null);
-            form.resetFields();
-            setModalOpen(true);
-          }}
-        >
-          Thêm giống
-        </Button>
+        <Space>
+          <Button icon={<DownloadOutlined />} onClick={handleDownloadTemplate}>
+            Tải template
+          </Button>
+          <Upload
+            accept=".xlsx,.xls"
+            showUploadList={false}
+            beforeUpload={handleImport}
+          >
+            <Button icon={<UploadOutlined />}>Import Excel</Button>
+          </Upload>
+          <Button icon={<DownloadOutlined />} onClick={handleExport}>
+            Export Excel
+          </Button>
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={() => {
+              setEditingItem(null);
+              form.resetFields();
+              setModalOpen(true);
+            }}
+          >
+            Thêm giống
+          </Button>
+        </Space>
       </div>
 
       <Card>
-        <Space style={{ marginBottom: 16 }}>
+        <Space style={{ marginBottom: 16 }} wrap>
           <Input
             placeholder="Tìm kiếm..."
             prefix={<SearchOutlined />}
@@ -178,7 +322,21 @@ export default function VarietiesPage() {
             style={{ width: 200 }}
             value={selectedCategory}
             onChange={setSelectedCategory}
-            options={categories.map((c) => ({ label: c.name, value: c.id }))}
+            options={categories.map((c) => ({
+              label: c.name + (c.isActive ? '' : ' (Ngừng)'),
+              value: c.id,
+            }))}
+          />
+          <Select
+            placeholder="Trạng thái"
+            allowClear
+            style={{ width: 150 }}
+            value={selectedStatus}
+            onChange={setSelectedStatus}
+            options={[
+              { label: 'Hoạt động', value: 'active' },
+              { label: 'Ngừng hoạt động', value: 'inactive' },
+            ]}
           />
         </Space>
 
@@ -211,7 +369,10 @@ export default function VarietiesPage() {
               label="Mã giống"
               rules={[{ required: true, message: 'Vui lòng nhập mã giống' }]}
             >
-              <Input placeholder="VD: LUA001" />
+              <Input
+                placeholder="VD: MG_00001"
+                disabled={!!editingItem} // Không cho sửa khi edit
+              />
             </Form.Item>
             <Form.Item
               name="categoryId"
@@ -220,7 +381,11 @@ export default function VarietiesPage() {
             >
               <Select
                 placeholder="Chọn nhóm"
-                options={categories.map((c) => ({ label: c.name, value: c.id }))}
+                showSearch
+                filterOption={(input, option) =>
+                  (option?.label?.toString() ?? '').toLowerCase().includes(input.toLowerCase())
+                }
+                options={activeCategories.map((c) => ({ label: c.name, value: c.id }))}
               />
             </Form.Item>
           </div>
