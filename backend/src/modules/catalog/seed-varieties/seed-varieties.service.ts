@@ -79,7 +79,25 @@ export class SeedVarietiesService {
       }
     }
 
-    Object.assign(variety, dto, { updatedBy: userId });
+    // Handle categoryId change - also update the relation
+    if (dto.categoryId && dto.categoryId !== variety.categoryId) {
+      variety.categoryId = dto.categoryId;
+      variety.category = { id: dto.categoryId } as any; // Set relation to trigger proper update
+    }
+
+    // Update other fields
+    if (dto.name !== undefined) variety.name = dto.name;
+    if (dto.scientificName !== undefined) variety.scientificName = dto.scientificName;
+    if (dto.localName !== undefined) variety.localName = dto.localName;
+    if (dto.origin !== undefined) variety.origin = dto.origin;
+    if (dto.characteristics !== undefined) variety.characteristics = dto.characteristics;
+    if (dto.growthDuration !== undefined) variety.growthDuration = dto.growthDuration;
+    if (dto.yieldPotential !== undefined) variety.yieldPotential = dto.yieldPotential;
+    if (dto.diseaseResistance !== undefined) variety.diseaseResistance = dto.diseaseResistance;
+    if (dto.notes !== undefined) variety.notes = dto.notes;
+    if (dto.isActive !== undefined) variety.isActive = dto.isActive;
+    variety.updatedBy = userId;
+
     return this.repository.save(variety);
   }
 

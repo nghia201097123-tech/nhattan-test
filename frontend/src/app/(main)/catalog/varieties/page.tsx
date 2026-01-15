@@ -47,10 +47,20 @@ export default function VarietiesPage() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const result = await seedVarietiesService.getAll({ categoryId: selectedCategory } as any);
-      setData(Array.isArray(result) ? result : result.data || []);
+      const params: any = {
+        page: 1,
+        limit: 1000, // Get all for now
+      };
+      if (selectedCategory) {
+        params.categoryId = selectedCategory;
+      }
+      const result = await seedVarietiesService.getAll(params);
+      // Handle both paginated and array response
+      const items = Array.isArray(result) ? result : (result.data || result.items || []);
+      setData(items);
     } catch (error) {
       console.error(error);
+      message.error('Không thể tải danh sách giống');
     } finally {
       setLoading(false);
     }
