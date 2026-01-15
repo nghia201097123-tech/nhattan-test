@@ -96,6 +96,7 @@ export class SeedVarietiesService {
     if (dto.yieldPotential !== undefined) variety.yieldPotential = dto.yieldPotential;
     if (dto.diseaseResistance !== undefined) variety.diseaseResistance = dto.diseaseResistance;
     if (dto.notes !== undefined) variety.notes = dto.notes;
+    if (dto.imageUrl !== undefined) variety.imageUrl = dto.imageUrl;
     if (dto.isActive !== undefined) variety.isActive = dto.isActive;
     variety.updatedBy = userId;
 

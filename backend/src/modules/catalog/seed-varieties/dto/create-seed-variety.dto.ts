@@ -64,6 +64,12 @@ export class CreateSeedVarietyDto {
   @IsString({ message: 'Ghi chú phải là chuỗi' })
   notes?: string;
 
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString({ message: 'URL ảnh phải là chuỗi' })
+  @MaxLength(500, { message: 'URL ảnh tối đa 500 ký tự' })
+  imageUrl?: string;
+
   @ApiPropertyOptional({ default: true })
   @IsOptional()
   @IsBoolean({ message: 'Trạng thái phải là true/false' })

@@ -52,6 +52,9 @@ export class SeedVariety {
   @Column({ type: 'text', nullable: true })
   notes: string;
 
+  @Column({ name: 'image_url', length: 500, nullable: true })
+  imageUrl: string;
+
   @Column({ name: 'is_active', default: true })
   isActive: boolean;
 

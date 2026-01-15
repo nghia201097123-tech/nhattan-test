@@ -7,6 +7,7 @@ import { UsersModule } from './modules/users/users.module';
 import { CatalogModule } from './modules/catalog/catalog.module';
 import { SamplesModule } from './modules/samples/samples.module';
 import { WarehouseModule } from './modules/warehouse/warehouse.module';
+import { UploadModule } from './modules/upload/upload.module';
 
 import databaseConfig from './config/database.config';
 import jwtConfig from './config/jwt.config';
@@ -41,6 +42,7 @@ import jwtConfig from './config/jwt.config';
     CatalogModule,
     SamplesModule,
     WarehouseModule,
+    UploadModule,
   ],
 })
 export class AppModule {}
