@@ -56,6 +56,7 @@ export default function CategoriesPage() {
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<SeedCategory | null>(null);
   const [selectedItem, setSelectedItem] = useState<SeedCategory | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0); // Key to force Tree re-render
   const [form] = Form.useForm();
 
   const fetchData = async () => {
@@ -67,6 +68,7 @@ export default function CategoriesPage() {
       ]);
       setData(treeResult);
       setFlatData(allResult);
+      setRefreshKey((prev) => prev + 1); // Increment to force Tree re-render
     } catch (error) {
       console.error(error);
       message.error('Không thể tải dữ liệu');
@@ -259,6 +261,7 @@ export default function CategoriesPage() {
         <Spin spinning={loading}>
           {treeData.length > 0 ? (
             <Tree
+              key={refreshKey}
               showLine={{ showLeafIcon: false }}
               defaultExpandAll
               blockNode
