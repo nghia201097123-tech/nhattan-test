@@ -14,9 +14,9 @@ import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { SeedVarietiesService } from './seed-varieties.service';
 import { CreateSeedVarietyDto } from './dto/create-seed-variety.dto';
 import { UpdateSeedVarietyDto } from './dto/update-seed-variety.dto';
+import { QuerySeedVarietyDto } from './dto/query-seed-variety.dto';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../../common/decorators/current-user.decorator';
-import { PaginationDto } from '../../../common/dto/pagination.dto';
 
 @ApiTags('Catalog - Seed Varieties')
 @ApiBearerAuth()
@@ -27,11 +27,8 @@ export class SeedVarietiesController {
 
   @Get()
   @ApiOperation({ summary: 'Get all seed varieties with pagination' })
-  async findAll(
-    @Query() query: PaginationDto,
-    @Query('categoryId') categoryId?: string,
-  ) {
-    return this.service.findAll(query, categoryId);
+  async findAll(@Query() query: QuerySeedVarietyDto) {
+    return this.service.findAll(query);
   }
 
   @Get(':id')

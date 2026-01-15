@@ -114,11 +114,21 @@ export default function VarietiesPage() {
     }
   };
 
-  // Filter data
+  // Filter data - search all fields
   const filteredData = data.filter((item) => {
+    const searchLower = searchText.toLowerCase();
     const matchSearch =
-      item.name?.toLowerCase().includes(searchText.toLowerCase()) ||
-      item.code?.toLowerCase().includes(searchText.toLowerCase());
+      !searchText ||
+      item.name?.toLowerCase().includes(searchLower) ||
+      item.code?.toLowerCase().includes(searchLower) ||
+      item.scientificName?.toLowerCase().includes(searchLower) ||
+      item.localName?.toLowerCase().includes(searchLower) ||
+      item.origin?.toLowerCase().includes(searchLower) ||
+      item.category?.name?.toLowerCase().includes(searchLower) ||
+      item.characteristics?.toLowerCase().includes(searchLower) ||
+      item.growthDuration?.toLowerCase().includes(searchLower) ||
+      item.yieldPotential?.toLowerCase().includes(searchLower) ||
+      item.diseaseResistance?.toLowerCase().includes(searchLower);
     const matchStatus =
       selectedStatus === undefined ||
       (selectedStatus === 'active' && item.isActive) ||

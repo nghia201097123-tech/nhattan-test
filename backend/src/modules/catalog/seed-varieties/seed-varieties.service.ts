@@ -4,7 +4,8 @@ import { Repository } from 'typeorm';
 import { SeedVariety } from './entities/seed-variety.entity';
 import { CreateSeedVarietyDto } from './dto/create-seed-variety.dto';
 import { UpdateSeedVarietyDto } from './dto/update-seed-variety.dto';
-import { PaginationDto, createPaginatedResult } from '../../../common/dto/pagination.dto';
+import { QuerySeedVarietyDto } from './dto/query-seed-variety.dto';
+import { createPaginatedResult } from '../../../common/dto/pagination.dto';
 
 @Injectable()
 export class SeedVarietiesService {
@@ -13,8 +14,8 @@ export class SeedVarietiesService {
     private readonly repository: Repository<SeedVariety>,
   ) {}
 
-  async findAll(query: PaginationDto, categoryId?: string) {
-    const { page, limit, search, sortBy, sortOrder } = query;
+  async findAll(query: QuerySeedVarietyDto) {
+    const { page, limit, search, sortBy, sortOrder, categoryId } = query;
     const skip = (page - 1) * limit;
 
     const queryBuilder = this.repository
@@ -27,7 +28,7 @@ export class SeedVarietiesService {
 
     if (search) {
       queryBuilder.andWhere(
-        '(variety.name ILIKE :search OR variety.code ILIKE :search OR variety.localName ILIKE :search)',
+        '(variety.name ILIKE :search OR variety.code ILIKE :search OR variety.localName ILIKE :search OR variety.scientificName ILIKE :search OR variety.origin ILIKE :search OR category.name ILIKE :search)',
         { search: `%${search}%` },
       );
     }
