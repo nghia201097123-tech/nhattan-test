@@ -60,17 +60,21 @@ export default function CategoriesPage() {
   const [form] = Form.useForm();
 
   const fetchData = async () => {
+    console.log('=== FETCH DATA START ===');
     setLoading(true);
     try {
       const [treeResult, allResult] = await Promise.all([
         seedCategoriesService.getTree(),
         seedCategoriesService.getAll(),
       ]);
+      console.log('Tree result:', JSON.stringify(treeResult, null, 2));
+      console.log('Flat result:', allResult.map(i => ({ id: i.id, name: i.name, parentId: i.parentId })));
       setData(treeResult);
       setFlatData(allResult);
       setRefreshKey((prev) => prev + 1); // Increment to force Tree re-render
+      console.log('=== FETCH DATA DONE ===');
     } catch (error) {
-      console.error(error);
+      console.error('Fetch error:', error);
       message.error('Không thể tải dữ liệu');
     } finally {
       setLoading(false);
