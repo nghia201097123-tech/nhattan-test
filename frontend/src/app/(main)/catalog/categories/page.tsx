@@ -147,7 +147,7 @@ export default function CategoriesPage() {
     return flatData
       .filter((item) => !editingItem || item.id !== editingItem.id)
       .map((item) => ({
-        label: `${'—'.repeat(item.level - 1)} ${item.name}`,
+        label: `${'—'.repeat(Math.max(0, (item.level || 1) - 1))} ${item.name}`,
         value: item.id,
       }));
   };
