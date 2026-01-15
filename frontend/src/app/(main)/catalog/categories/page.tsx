@@ -24,8 +24,6 @@ import {
   PlusOutlined,
   EditOutlined,
   DeleteOutlined,
-  FolderOutlined,
-  FileOutlined,
   InfoCircleOutlined,
   EyeOutlined,
 } from '@ant-design/icons';
@@ -203,11 +201,6 @@ export default function CategoriesPage() {
         }}
       >
         <Space>
-          {hasChildren ? (
-            <FolderOutlined style={{ color: '#1890ff' }} />
-          ) : (
-            <FileOutlined style={{ color: '#52c41a' }} />
-          )}
           <span style={{ fontWeight: hasChildren ? 600 : 400 }}>{item.name}</span>
           <Text type="secondary" style={{ fontSize: 12 }}>
             ({item.code})
