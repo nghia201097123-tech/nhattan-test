@@ -49,7 +49,7 @@ export default function VarietiesPage() {
     try {
       const params: any = {
         page: 1,
-        limit: 1000, // Get all for now
+        limit: 100, // Max allowed by backend
       };
       if (selectedCategory) {
         params.categoryId = selectedCategory;
