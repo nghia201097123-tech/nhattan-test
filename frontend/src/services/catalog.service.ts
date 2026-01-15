@@ -229,3 +229,124 @@ export const sampleProvidersService = {
     await api.delete(`/catalog/sample-providers/${id}`);
   },
 };
+
+// Evaluation Criteria
+export const evaluationCriteriaService = {
+  // Stages
+  async getStages(): Promise<any[]> {
+    const response = await api.get('/catalog/evaluation-criteria/stages');
+    return response.data;
+  },
+  async createStage(data: any): Promise<any> {
+    const response = await api.post('/catalog/evaluation-criteria/stages', data);
+    return response.data;
+  },
+  async updateStage(id: string, data: any): Promise<any> {
+    const response = await api.put(`/catalog/evaluation-criteria/stages/${id}`, data);
+    return response.data;
+  },
+  async deleteStage(id: string): Promise<void> {
+    await api.delete(`/catalog/evaluation-criteria/stages/${id}`);
+  },
+  // Criteria
+  async getAll(stageId?: string): Promise<any[]> {
+    const response = await api.get('/catalog/evaluation-criteria', { params: { stageId } });
+    return response.data;
+  },
+  async getById(id: string): Promise<any> {
+    const response = await api.get(`/catalog/evaluation-criteria/${id}`);
+    return response.data;
+  },
+  async create(data: any): Promise<any> {
+    const response = await api.post('/catalog/evaluation-criteria', data);
+    return response.data;
+  },
+  async update(id: string, data: any): Promise<any> {
+    const response = await api.put(`/catalog/evaluation-criteria/${id}`, data);
+    return response.data;
+  },
+  async delete(id: string): Promise<void> {
+    await api.delete(`/catalog/evaluation-criteria/${id}`);
+  },
+  // Scores
+  async updateScores(criteriaId: string, scores: any[]): Promise<any[]> {
+    const response = await api.put(`/catalog/evaluation-criteria/${criteriaId}/scores`, { scores });
+    return response.data;
+  },
+};
+
+// Export Reasons
+export const exportReasonsService = {
+  async getAll(isActive?: boolean): Promise<any[]> {
+    const response = await api.get('/catalog/export-reasons', { params: { isActive } });
+    return response.data;
+  },
+  async getById(id: string): Promise<any> {
+    const response = await api.get(`/catalog/export-reasons/${id}`);
+    return response.data;
+  },
+  async create(data: any): Promise<any> {
+    const response = await api.post('/catalog/export-reasons', data);
+    return response.data;
+  },
+  async update(id: string, data: any): Promise<any> {
+    const response = await api.put(`/catalog/export-reasons/${id}`, data);
+    return response.data;
+  },
+  async delete(id: string): Promise<void> {
+    await api.delete(`/catalog/export-reasons/${id}`);
+  },
+};
+
+// Category Groups
+export const categoryGroupsService = {
+  async getAll(isActive?: boolean): Promise<any[]> {
+    const response = await api.get('/catalog/category-groups', { params: { isActive } });
+    return response.data;
+  },
+  async getByCode(code: string): Promise<any> {
+    const response = await api.get(`/catalog/category-groups/by-code/${code}`);
+    return response.data;
+  },
+  async getById(id: string): Promise<any> {
+    const response = await api.get(`/catalog/category-groups/${id}`);
+    return response.data;
+  },
+  async create(data: any): Promise<any> {
+    const response = await api.post('/catalog/category-groups', data);
+    return response.data;
+  },
+  async update(id: string, data: any): Promise<any> {
+    const response = await api.put(`/catalog/category-groups/${id}`, data);
+    return response.data;
+  },
+  async delete(id: string): Promise<void> {
+    await api.delete(`/catalog/category-groups/${id}`);
+  },
+};
+
+// Category Items
+export const categoryItemsService = {
+  async getByGroup(groupId: string, isActive?: boolean): Promise<any[]> {
+    const response = await api.get('/catalog/category-items', { params: { groupId, isActive } });
+    return response.data;
+  },
+  async getById(id: string): Promise<any> {
+    const response = await api.get(`/catalog/category-items/${id}`);
+    return response.data;
+  },
+  async create(data: any): Promise<any> {
+    const response = await api.post('/catalog/category-items', data);
+    return response.data;
+  },
+  async update(id: string, data: any): Promise<any> {
+    const response = await api.put(`/catalog/category-items/${id}`, data);
+    return response.data;
+  },
+  async delete(id: string): Promise<void> {
+    await api.delete(`/catalog/category-items/${id}`);
+  },
+  async reorder(groupId: string, itemIds: string[]): Promise<void> {
+    await api.put('/catalog/category-items/reorder', { groupId, itemIds });
+  },
+};

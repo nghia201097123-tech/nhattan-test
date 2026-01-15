@@ -72,9 +72,13 @@ export default function MainLayout({ children }: MainLayoutProps) {
         { key: '/catalog/categories', label: t.menu.categories },
         { key: '/catalog/varieties', label: t.menu.varieties },
         { key: '/catalog/warehouses', label: t.menu.warehouses },
+        { key: '/catalog/storage-locations', label: 'Vị trí lưu trữ' },
         { key: '/catalog/locations', label: t.menu.locations },
         { key: '/catalog/providers', label: t.menu.providers },
         { key: '/catalog/staff', label: t.menu.staff },
+        { key: '/catalog/evaluation-criteria', label: 'Tiêu chuẩn đánh giá' },
+        { key: '/catalog/export-reasons', label: 'Lý do xuất kho' },
+        { key: '/catalog/category-groups', label: 'Danh mục khác' },
       ],
     },
     {
