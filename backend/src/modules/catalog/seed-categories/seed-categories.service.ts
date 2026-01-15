@@ -84,6 +84,12 @@ export class SeedCategoriesService {
   async update(id: string, dto: UpdateSeedCategoryDto, userId: string): Promise<SeedCategory> {
     const category = await this.findById(id);
 
+    console.log('=== UPDATE CATEGORY ===');
+    console.log('ID:', id);
+    console.log('DTO:', JSON.stringify(dto));
+    console.log('Current parentId:', category.parentId);
+    console.log('New parentId from DTO:', dto.parentId);
+
     if (dto.code && dto.code !== category.code) {
       const existing = await this.repository.findOne({ where: { code: dto.code } });
       if (existing) {
@@ -91,28 +97,34 @@ export class SeedCategoriesService {
       }
     }
 
-    // Handle parentId change - check if parentId is being changed (including to null)
-    const parentIdChanged =
-      dto.parentId !== undefined &&
-      ((dto.parentId === null && category.parentId !== null) ||
-        (dto.parentId !== null && dto.parentId !== category.parentId));
+    // Handle parentId change - normalize values for comparison
+    const currentParentId = category.parentId || null;
+    const newParentId = dto.parentId !== undefined ? (dto.parentId || null) : currentParentId;
+    const parentIdChanged = newParentId !== currentParentId;
+
+    console.log('Normalized - Current:', currentParentId, 'New:', newParentId);
+    console.log('Parent changed:', parentIdChanged);
 
     if (parentIdChanged) {
-      if (dto.parentId === null) {
+      if (newParentId === null) {
         // Moving to root level
+        console.log('Moving to root level');
         category.parentId = null;
         category.level = 1;
         category.path = generatePath(null, category.id);
       } else {
         // Check if new parent is not a descendant of current category (prevent circular reference)
-        const newParent = await this.findById(dto.parentId);
+        const newParent = await this.findById(newParentId);
+        console.log('New parent found:', newParent.name, 'path:', newParent.path);
+
         if (newParent.path && newParent.path.includes(`/${id}/`)) {
           throw new BadRequestException('Không thể chọn nhóm con làm nhóm cha');
         }
 
-        category.parentId = dto.parentId;
+        category.parentId = newParentId;
         category.level = newParent.level + 1;
         category.path = generatePath(newParent.path, category.id);
+        console.log('Updated to level:', category.level, 'path:', category.path);
       }
 
       // Update all descendants' level and path
@@ -127,7 +139,11 @@ export class SeedCategoriesService {
     if (dto.isActive !== undefined) category.isActive = dto.isActive;
     category.updatedBy = userId;
 
-    return this.repository.save(category);
+    const saved = await this.repository.save(category);
+    console.log('Saved category:', JSON.stringify(saved));
+    console.log('=== END UPDATE ===');
+
+    return saved;
   }
 
   private async updateDescendants(parent: SeedCategory): Promise<void> {
