@@ -90,11 +90,17 @@ export default function CategoriesPage() {
 
   const handleSubmit = async (values: any) => {
     try {
+      // Ensure parentId is explicitly null if not set (not undefined)
+      const payload = {
+        ...values,
+        parentId: values.parentId || null,
+      };
+
       if (editingItem) {
-        await seedCategoriesService.update(editingItem.id, values);
+        await seedCategoriesService.update(editingItem.id, payload);
         message.success('Cập nhật thành công');
       } else {
-        await seedCategoriesService.create(values);
+        await seedCategoriesService.create(payload);
         message.success('Thêm mới thành công');
       }
       setModalOpen(false);

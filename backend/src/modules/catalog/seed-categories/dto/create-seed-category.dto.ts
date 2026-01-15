@@ -1,11 +1,14 @@
-import { IsString, IsNotEmpty, IsOptional, IsUUID, IsInt, IsBoolean, MaxLength } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, IsUUID, IsInt, IsBoolean, MaxLength, ValidateIf } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Transform } from 'class-transformer';
 
 export class CreateSeedCategoryDto {
   @ApiPropertyOptional()
   @IsOptional()
+  @Transform(({ value }) => (value === '' || value === undefined ? null : value))
+  @ValidateIf((o) => o.parentId !== null)
   @IsUUID()
-  parentId?: string;
+  parentId?: string | null;
 
   @ApiProperty()
   @IsString()

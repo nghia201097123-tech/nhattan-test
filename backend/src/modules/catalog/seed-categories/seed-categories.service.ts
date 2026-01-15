@@ -57,8 +57,8 @@ export class SeedCategoriesService {
       throw new BadRequestException('Category code already exists');
     }
 
-    let parentPath: string = null;
-    let level = 0;
+    let parentPath: string | null = null;
+    let level = 1; // Root level starts at 1
 
     if (dto.parentId) {
       const parent = await this.findById(dto.parentId);
@@ -91,13 +91,18 @@ export class SeedCategoriesService {
       }
     }
 
-    // Handle parentId change
-    if (dto.parentId !== undefined && dto.parentId !== category.parentId) {
-      if (dto.parentId === null || dto.parentId === '') {
+    // Handle parentId change - check if parentId is being changed (including to null)
+    const parentIdChanged =
+      dto.parentId !== undefined &&
+      ((dto.parentId === null && category.parentId !== null) ||
+        (dto.parentId !== null && dto.parentId !== category.parentId));
+
+    if (parentIdChanged) {
+      if (dto.parentId === null) {
         // Moving to root level
         category.parentId = null;
         category.level = 1;
-        category.path = `/${category.id}`;
+        category.path = generatePath(null, category.id);
       } else {
         // Check if new parent is not a descendant of current category (prevent circular reference)
         const newParent = await this.findById(dto.parentId);
