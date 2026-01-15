@@ -201,10 +201,18 @@ export default function CategoriesPage() {
         }}
       >
         <Space>
-          <span style={{ fontWeight: hasChildren ? 600 : 400 }}>{item.name}</span>
-          <Text type="secondary" style={{ fontSize: 12 }}>
-            ({item.code})
-          </Text>
+          <span
+            style={{
+              fontWeight: hasChildren ? 600 : 400,
+              padding: '2px 8px',
+              borderRadius: 4,
+              border: hasChildren ? '1px solid #1890ff' : '1px solid #d9d9d9',
+              backgroundColor: hasChildren ? '#e6f7ff' : '#fafafa',
+            }}
+          >
+            {item.name}
+          </span>
+          <Tag color="default" style={{ margin: 0 }}>{item.code}</Tag>
           {!item.isActive && <Tag color="red">Ngừng</Tag>}
         </Space>
 
