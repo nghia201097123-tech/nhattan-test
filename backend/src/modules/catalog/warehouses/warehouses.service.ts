@@ -29,7 +29,7 @@ export class WarehousesService {
     });
 
     if (!warehouse) {
-      throw new NotFoundException('Warehouse not found');
+      throw new NotFoundException('Không tìm thấy kho');
     }
 
     return warehouse;
@@ -59,7 +59,7 @@ export class WarehousesService {
   async create(dto: CreateWarehouseDto, userId: string): Promise<Warehouse> {
     const existing = await this.repository.findOne({ where: { code: dto.code } });
     if (existing) {
-      throw new BadRequestException('Warehouse code already exists');
+      throw new BadRequestException('Mã kho đã tồn tại');
     }
 
     const warehouse = this.repository.create({
@@ -76,7 +76,7 @@ export class WarehousesService {
     if (dto.code && dto.code !== warehouse.code) {
       const existing = await this.repository.findOne({ where: { code: dto.code } });
       if (existing) {
-        throw new BadRequestException('Warehouse code already exists');
+        throw new BadRequestException('Mã kho đã tồn tại');
       }
     }
 
@@ -90,7 +90,7 @@ export class WarehousesService {
     // Check if has storage locations
     const locations = await this.getLocations(id);
     if (locations.length > 0) {
-      throw new BadRequestException('Cannot delete warehouse with storage locations');
+      throw new BadRequestException('Không thể xóa kho đang có vị trí lưu trữ');
     }
 
     await this.repository.remove(warehouse);
