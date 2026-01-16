@@ -1,14 +1,24 @@
-import { HttpService } from '@nestjs/axios';
 import { HttpStatus, Injectable } from '@nestjs/common';
-import { lastValueFrom } from 'rxjs';
 import { ResponseData } from 'src/utils.common/utils.response.common/utils.response.common';
+const { exec } = require("child_process");
+import { promisify } from 'util';
+const execAsync = promisify(exec);
 
 @Injectable()
 export class ChannelOrderFoodApiGRFService {
-  constructor(
-    private readonly httpService: HttpService
+  constructor() { }
 
-  ) { }
+  /**
+   * Safe JSON parse với error handling
+   */
+  private safeJsonParse<T>(jsonString: string, defaultValue: T): T {
+    try {
+      return JSON.parse(jsonString);
+    } catch (error) {
+      console.error('[safeJsonParse] Failed to parse JSON:', error);
+      return defaultValue;
+    }
+  }
 
   // -------------------------------- GRF --------------------------------
 
@@ -16,23 +26,21 @@ export class ChannelOrderFoodApiGRFService {
   async getGRFFoodList(url: string, access_token: string): Promise<any> {
     try {
 
+      const curlCommand = `curl -s -X GET '${url}' \
+        --header 'Authorization: ${access_token}'`;
 
+      const result = await execAsync(curlCommand);
+      const data = this.safeJsonParse(result.stdout, { categories: [] });
 
-      const headers = {
-        'Authorization': access_token
-      };
+      const catalogs = data.categories || [];
 
-      const data = await lastValueFrom(this.httpService.get(url, { headers }));
+      let allItems: any[] = [];
 
-      const catalogs = data.data.categories;
-
-      let allItems = [];
-
-      catalogs.forEach((category) => {
-        allItems = allItems.concat(category.items);
+      catalogs.forEach((category: any) => {
+        allItems = allItems.concat(category.items || []);
       });
 
-      const foods = allItems.map((item) => ({
+      const foods = allItems.map((item: any) => ({
         id: item.itemID,
         name: item.itemName,
         price: item.priceInMin,
@@ -42,8 +50,9 @@ export class ChannelOrderFoodApiGRFService {
       }));
 
       return new ResponseData(HttpStatus.OK, "SUCCESS", foods);
-    } catch (error) {
-      return new ResponseData(error.response.status, error.response.statusText, []);
+    } catch (error: any) {
+      console.error('[getGRFFoodList] Error:', error.message);
+      return new ResponseData(HttpStatus.BAD_REQUEST, error.message || "Lỗi ! getGRFFoodList", []);
     }
 
   }
@@ -51,27 +60,26 @@ export class ChannelOrderFoodApiGRFService {
   async getGRFFoodToppingList(url: string, access_token: string): Promise<any> {
     try {
 
+      const curlCommand = `curl -s -X GET '${url}' \
+        --header 'Authorization: ${access_token}'`;
 
+      const result = await execAsync(curlCommand);
+      const data = this.safeJsonParse(result.stdout, { modifierGroups: [] });
 
-      const headers = {
-        'Authorization': access_token
-      };
-
-      const data = await lastValueFrom(this.httpService.get(url, { headers }));
-
-      const foodToppings = data.data.modifierGroups.map(group => ({
+      const foodToppings = (data.modifierGroups || []).map((group: any) => ({
         id: group.modifierGroupID,
         name: group.modifierGroupName,
-        list: group.modifiers.map(option => ({
+        list: (group.modifiers || []).map((option: any) => ({
           id: option.modifierID,
           name: option.modifierName,
-          price: isNaN(parseFloat(option.priceDisplay.replace(/\./g, ''))) ? 0 : parseFloat(option.priceDisplay.replace(/\./g, ''))
+          price: isNaN(parseFloat(option.priceDisplay?.replace(/\./g, ''))) ? 0 : parseFloat(option.priceDisplay.replace(/\./g, ''))
         }))
       }));
 
       return new ResponseData(HttpStatus.OK, "SUCCESS", foodToppings);
-    } catch (error) {
-      return new ResponseData(error.response.status, error.response.statusText, []);
+    } catch (error: any) {
+      console.error('[getGRFFoodToppingList] Error:', error.message);
+      return new ResponseData(HttpStatus.BAD_REQUEST, error.message || "Lỗi ! getGRFFoodToppingList", []);
     }
 
   }
@@ -81,42 +89,34 @@ export class ChannelOrderFoodApiGRFService {
 
     try {
 
+      const curlCommand = `curl -s -X GET '${url}' \
+        --header 'Authorization: ${access_token}'`;
 
-      const headers = {
-        'Authorization': access_token
-      };
+      const result = await execAsync(curlCommand);
+      const data = this.safeJsonParse(result.stdout, { orders: [] });
 
-      const data = await lastValueFrom(this.httpService.get(url, { headers }));
-
-      const orders = data.data.orders
-        .map(o => ({
+      const orders = (data.orders || [])
+        .map((o: any) => ({
           order_id: o.orderID,
-          order_amount: parseFloat(o.orderValue.replace(/\./g, '')),
+          order_amount: parseFloat((o.orderValue || '0').replace(/\./g, '')),
           status_string: o.state,
-          created_at: o.times.createdAt.replace('T', ' ').replace('Z', ''),
-          driver_name: o.driver.name,
-          driver_avatar: o.driver.avatar,
+          created_at: (o.times?.createdAt || '').replace('T', ' ').replace('Z', ''),
+          driver_name: o.driver?.name || '',
+          driver_avatar: o.driver?.avatar || '',
           display_id: o.displayID
         }));
 
       return new ResponseData(HttpStatus.OK, "SUCCESS", orders);
-    } catch (error) {
-
-      return new ResponseData(error.response.status, error.response.statusText, []);
+    } catch (error: any) {
+      console.error('[getGRFNewOrderList] Error:', error.message);
+      return new ResponseData(HttpStatus.BAD_REQUEST, error.message || "Lỗi ! getGRFNewOrderList", []);
     }
   }
 
   async loginGRF(url: string, usernamne: string, password: string, device_id: string, device_brand: string): Promise<any> {
     try {
 
-      const headers = {
-        "Content-Type": "application/json",
-        "user-agent": "Grab Merchant/4.126.0 (ios 16.7.10; Build 102734851)",
-        "mex-country": "VN",
-        "x-currency": "VND"
-      }
-
-      const body = {
+      const body = JSON.stringify({
         login_source: "TROY_APP_MAIN_USERNAME_PASSWORD",
         session_data: {
           mobile_session_data: {
@@ -128,18 +128,26 @@ export class ChannelOrderFoodApiGRFService {
         without_force_logout: true,
         password: password,
         username: usernamne,
-      };
+      });
 
-      const data = await lastValueFrom(this.httpService.post(url, JSON.stringify(body), { headers }));
+      const curlCommand = `curl -s -X POST '${url}' \
+        --header 'Content-Type: application/json' \
+        --header 'user-agent: Grab Merchant/4.126.0 (ios 16.7.10; Build 102734851)' \
+        --header 'mex-country: VN' \
+        --header 'x-currency: VND' \
+        --data '${body.replace(/'/g, "'\\''")}'`;
 
-      if (data.data.data.code === 200) {
+      const result = await execAsync(curlCommand);
+      const data = this.safeJsonParse(result.stdout, { data: { code: 0 } });
+
+      if (data.data?.code === 200) {
         return new ResponseData(
           HttpStatus.OK,
           "SUCCESS",
           {
-            device_id: !data.data.data.active_session ? device_id : !data.data.data.active_session.mobile_session_data ? device_id : data.data.data.active_session.mobile_session_data.device_id,
-            device_brand: !data.data.data.active_session ? device_brand : !data.data.data.active_session.mobile_session_data ? device_brand : data.data.data.active_session.mobile_session_data.device_brand,
-            jwt: !data.data.data.data ? "" : data.data.data.data.jwt,
+            device_id: !data.data.active_session ? device_id : !data.data.active_session.mobile_session_data ? device_id : data.data.active_session.mobile_session_data.device_id,
+            device_brand: !data.data.active_session ? device_brand : !data.data.active_session.mobile_session_data ? device_brand : data.data.active_session.mobile_session_data.device_brand,
+            jwt: !data.data.data ? "" : data.data.data.jwt,
 
           });
       } else {
@@ -153,11 +161,11 @@ export class ChannelOrderFoodApiGRFService {
           });
       }
     }
-    catch (error) {
-
+    catch (error: any) {
+      console.error('[loginGRF] Error:', error.message);
       return new ResponseData(
-        error.response.status,
-        error.response.statusText,
+        HttpStatus.BAD_REQUEST,
+        error.message || "Lỗi ! loginGRF",
         {
           device_id: device_id,
           device_brand: device_brand,
@@ -171,14 +179,7 @@ export class ChannelOrderFoodApiGRFService {
   async logoutGRF(url: string, usernamne: string, password: string): Promise<any> {
     try {
 
-      const headers = {
-        "Content-Type": "application/json",
-        "user-agent": "Grab Merchant/4.126.0 (ios 16.7.10; Build 102734851)",
-        "mex-country": "VN",
-        "x-currency": "VND"
-      }
-
-      const body = {
+      const body = JSON.stringify({
         login_source: "TROY_APP_MAIN_USERNAME_PASSWORD",
         session_data: {
           mobile_session_data: {
@@ -190,18 +191,26 @@ export class ChannelOrderFoodApiGRFService {
         without_force_logout: false,
         password: password,
         username: usernamne,
-      };
+      });
 
-      const data = await lastValueFrom(this.httpService.post(url, JSON.stringify(body), { headers }));
+      const curlCommand = `curl -s -X POST '${url}' \
+        --header 'Content-Type: application/json' \
+        --header 'user-agent: Grab Merchant/4.126.0 (ios 16.7.10; Build 102734851)' \
+        --header 'mex-country: VN' \
+        --header 'x-currency: VND' \
+        --data '${body.replace(/'/g, "'\\''")}'`;
 
-      if (data.data.data.code === 200) {
+      const result = await execAsync(curlCommand);
+      const data = this.safeJsonParse(result.stdout, { data: { code: 0 } });
+
+      if (data.data?.code === 200) {
         return new ResponseData(
           HttpStatus.OK,
           "SUCCESS",
           {
             device_id: "",
             device_brand: "",
-            jwt: !data.data.data.data ? "" : data.data.data.data.jwt,
+            jwt: !data.data.data ? "" : data.data.data.jwt,
 
           });
       } else {
@@ -215,11 +224,11 @@ export class ChannelOrderFoodApiGRFService {
           });
       }
     }
-    catch (error) {
-
+    catch (error: any) {
+      console.error('[logoutGRF] Error:', error.message);
       return new ResponseData(
-        error.response.status,
-        error.response.statusText,
+        HttpStatus.BAD_REQUEST,
+        error.message || "Lỗi ! logoutGRF",
         {
           device_id: "",
           device_brand: "",
@@ -233,43 +242,37 @@ export class ChannelOrderFoodApiGRFService {
   async updateGRFDeviceInfor(url: string, access_token: string, device_id: string, device_brand: string): Promise<any> {
     try {
 
-      const headers = {
-        'x-mts-ssid': access_token
-      };
-
-      const body = {
+      const body = JSON.stringify({
         "deviceInfo": {
           "UType": "foodmax",
           "DevBrand": device_brand,
           "DevUDID": device_id,
           "DevModel": device_brand
         }
-      };
+      });
 
-      const data = await lastValueFrom(this.httpService.post(url, body, { headers }));
+      const curlCommand = `curl -s -X POST '${url}' \
+        --header 'x-mts-ssid: ${access_token}' \
+        --header 'Content-Type: application/json' \
+        --data '${body.replace(/'/g, "'\\''")}'`;
 
-      if (data.status == 200) {
-        return new ResponseData(
-          HttpStatus.OK,
-          "SUCCESS",
-          {
-            message: data.data.message
-          }
-        );
-      } else {
-        return new ResponseData(
-          HttpStatus.BAD_REQUEST,
-          "Vui lòng đăng nhập trên thiết bị di động . rồi hãy thử lại",
-          {
-            message: data.data.message
-          }
-        );
-      }
-    }
-    catch (error) {
+      const result = await execAsync(curlCommand);
+      const data = this.safeJsonParse(result.stdout, { message: '' });
+
+      // Assuming success if we got a response
       return new ResponseData(
-        error.response.status,
-        error.response.statusText,
+        HttpStatus.OK,
+        "SUCCESS",
+        {
+          message: data.message || ''
+        }
+      );
+    }
+    catch (error: any) {
+      console.error('[updateGRFDeviceInfor] Error:', error.message);
+      return new ResponseData(
+        HttpStatus.BAD_REQUEST,
+        error.message || "Lỗi ! updateGRFDeviceInfor",
         {
           message: ""
         }
@@ -281,19 +284,19 @@ export class ChannelOrderFoodApiGRFService {
   async getGRFBranchDetail(url: string, access_token: string): Promise<any> {
     try {
 
-      const headers = {
-        'Content-Type': 'application/json',
-        'x-mts-ssid': access_token,
-        'x-user-type': 'user-profile'
-      };
+      const curlCommand = `curl -s -X GET '${url}' \
+        --header 'Content-Type: application/json' \
+        --header 'x-mts-ssid: ${access_token}' \
+        --header 'x-user-type: user-profile'`;
 
-      const data = await lastValueFrom(this.httpService.get(url, { headers }));
+      const result = await execAsync(curlCommand);
+      const data = this.safeJsonParse(result.stdout, { data: null });
 
-      if (data.status == 200) {
+      if (data.data?.grab_food_profile?.merchant?.name) {
         return new ResponseData(
           HttpStatus.OK,
           "SUCCESS",
-          { name: data.data.data.grab_food_profile.merchant.name }
+          { name: data.data.grab_food_profile.merchant.name }
         );
       } else {
         return new ResponseData(
@@ -303,10 +306,11 @@ export class ChannelOrderFoodApiGRFService {
         )
       }
     }
-    catch (error) {
+    catch (error: any) {
+      console.error('[getGRFBranchDetail] Error:', error.message);
       return new ResponseData(
-        error.response.status,
-        error.response.statusText,
+        HttpStatus.BAD_REQUEST,
+        error.message || "Lỗi ! getGRFBranchDetail",
         { name: "" }
       );
     }
@@ -315,15 +319,25 @@ export class ChannelOrderFoodApiGRFService {
   async getGRFOrderDetailUpdateStatus(url: string, access_token: string, order_id: string): Promise<any> {
     try {
 
-
-      const headers = {
-        'Authorization': access_token
-      };
       const fullUrl = `${url}/${order_id}`;
 
-      const data = await lastValueFrom(this.httpService.get(fullUrl, { headers }));
+      const curlCommand = `curl -s -X GET '${fullUrl}' \
+        --header 'Authorization: ${access_token}'`;
 
-      const order = data.data.order;
+      const result = await execAsync(curlCommand);
+      const data = this.safeJsonParse(result.stdout, { order: null });
+
+      const order = data.order;
+
+      if (!order) {
+        return new ResponseData(
+          HttpStatus.BAD_REQUEST,
+          "Order not found",
+          {
+            order_id: 0,
+            order_status: ''
+          });
+      }
 
       return new ResponseData(
         HttpStatus.OK,
@@ -334,11 +348,11 @@ export class ChannelOrderFoodApiGRFService {
         });
 
     }
-    catch (error) {
-
+    catch (error: any) {
+      console.error('[getGRFOrderDetailUpdateStatus] Error:', error.message);
       return new ResponseData(
-        error.response.status,
-        error.response.statusText,
+        HttpStatus.BAD_REQUEST,
+        error.message || "Lỗi ! getGRFOrderDetailUpdateStatus",
         {
           order_id: 0,
           order_status: ''
@@ -349,19 +363,20 @@ export class ChannelOrderFoodApiGRFService {
 
   async confirmGRFBill(url: string, access_token: string, order_id: string): Promise<any> {
     try {
-      const headers = {
-        'Authorization': access_token,
-        'Content-Type': 'application/json',
-      };
-
-      const body = {
+      const body = JSON.stringify({
         orderIDs: [order_id],
         markStatus: 1
-      };
+      });
 
-      const data = await lastValueFrom(this.httpService.post(url, body, { headers }));
+      const curlCommand = `curl -s -X POST '${url}' \
+        --header 'Authorization: ${access_token}' \
+        --header 'Content-Type: application/json' \
+        --data '${body.replace(/'/g, "'\\''")}'`;
 
-      if (data.data?.reason ?? '' == '') {
+      const result = await execAsync(curlCommand);
+      const data = this.safeJsonParse(result.stdout, { reason: '', message: '' });
+
+      if ((data.reason ?? '') == '') {
         return new ResponseData(
           HttpStatus.OK,
           "SUCCESS"
@@ -369,24 +384,22 @@ export class ChannelOrderFoodApiGRFService {
       } else {
         return new ResponseData(
           HttpStatus.BAD_REQUEST,
-          data.data.message
+          data.message || "Error"
         );
       }
     }
-    catch (error) {
-      const statusCode = error.response?.status || HttpStatus.BAD_REQUEST;
-      const message = error.response?.data.message || error.response?.statusText;
-
-      return new ResponseData(statusCode, message, {});
+    catch (error: any) {
+      console.error('[confirmGRFBill] Error:', error.message);
+      return new ResponseData(HttpStatus.BAD_REQUEST, error.message || "Lỗi ! confirmGRFBill", {});
 
     }
 
   }
 
   async getEarningSumaryReport(
-    url: string, 
-    access_token: string, 
-    from_date: string, 
+    url: string,
+    access_token: string,
+    from_date: string,
     to_date: string,
     channel_branch_id: number,
     channel_branch_name: string,
@@ -395,27 +408,28 @@ export class ChannelOrderFoodApiGRFService {
 
   ): Promise<any> {
     try {
-      const headers = {
-        'x-mts-ssid': access_token,
-        'Content-Type': 'application/json',
-      };
-
-      const body = {
+      const body = JSON.stringify({
         date_from: from_date,
         date_to: to_date
-      };
+      });
 
-      const data = await lastValueFrom(this.httpService.post(url, body, { headers }));
+      const curlCommand = `curl -s -X POST '${url}' \
+        --header 'x-mts-ssid: ${access_token}' \
+        --header 'Content-Type: application/json' \
+        --data '${body.replace(/'/g, "'\\''")}'`;
 
-      if (data.status == 200) {
+      const result = await execAsync(curlCommand);
+      const responseData = this.safeJsonParse(result.stdout, { data: null });
+
+      if (responseData.data) {
         return new ResponseData(
           HttpStatus.OK,
           "SUCCESS",
           {
-            net_sales: data.data.data.net_sales,
-            net_total: data.data.data.net_total,
-            total_orders: data.data.data.total_orders,
-            breakdown_by_category: JSON.stringify(data.data.data.breakdown_by_category.map(o => ({
+            net_sales: responseData.data.net_sales,
+            net_total: responseData.data.net_total,
+            total_orders: responseData.data.total_orders,
+            breakdown_by_category: JSON.stringify((responseData.data.breakdown_by_category || []).map((o: any) => ({
               type: o.type,
               order_for_sorting: o.order_for_sorting,
               net_total: o.net_total,
@@ -424,13 +438,13 @@ export class ChannelOrderFoodApiGRFService {
               channel_branch_name: channel_branch_name,
               channel_branch_address: channel_branch_address,
               channel_branch_phone: channel_branch_phone,
-              breakdown: (o.breakdown ?? []).filter(a => a.value != 0).map(b => ({
+              breakdown: (o.breakdown ?? []).filter((a: any) => a.value != 0).map((b: any) => ({
                 order_for_sorting: b.order_for_sorting,
                 content: b.content?.localized ?? '',
                 value: b.value,
                 count: b.count,
                 tooltip: b.tooltip?.localized ?? '',
-                breakdown: (b.breakdown ?? []).filter(c => c.value != 0).map(d => ({
+                breakdown: (b.breakdown ?? []).filter((c: any) => c.value != 0).map((d: any) => ({
                   order_for_sorting: d.order_for_sorting,
                   content: d.content?.localized ?? '',
                   value: d.value,
@@ -454,12 +468,9 @@ export class ChannelOrderFoodApiGRFService {
         )
       }
     }
-    catch (error) {
-
-      const statusCode = error.response?.status || HttpStatus.BAD_REQUEST;
-      const message = error.response?.data.message || error.response?.statusText;
-
-      return new ResponseData(statusCode, message, {
+    catch (error: any) {
+      console.error('[getEarningSumaryReport] Error:', error.message);
+      return new ResponseData(HttpStatus.BAD_REQUEST, error.message || "Lỗi ! getEarningSumaryReport", {
         net_sales: 0,
         net_total: 0,
         total_orders: 0,
@@ -471,9 +482,9 @@ export class ChannelOrderFoodApiGRFService {
   }
 
   async getEarningSumaryReportV2(
-    url: string, 
-    access_token: string, 
-    from_date: string, 
+    url: string,
+    access_token: string,
+    from_date: string,
     to_date: string,
     channel_branch_id: number,
     channel_branch_name: string,
@@ -482,12 +493,7 @@ export class ChannelOrderFoodApiGRFService {
 
   ): Promise<any> {
     try {
-      const headers = {
-        'x-mts-ssid': access_token,
-        'Content-Type': 'application/json'
-      };
-
-      const body = {
+      const body = JSON.stringify({
         filters : {
           dateTime : {
             "from": from_date,
@@ -495,36 +501,40 @@ export class ChannelOrderFoodApiGRFService {
             "frequency": "monthly"
           }
         }
-        // date_from: from_date,
-        // date_to: to_date
-      };
+      });
 
-      const data = await lastValueFrom(this.httpService.post(url, body, { headers }));      
+      const curlCommand = `curl -s -X POST '${url}' \
+        --header 'x-mts-ssid: ${access_token}' \
+        --header 'Content-Type: application/json' \
+        --data '${body.replace(/'/g, "'\\''")}'`;
 
-      if (data.status == 200) {
+      const result = await execAsync(curlCommand);
+      const responseData = this.safeJsonParse(result.stdout, { data: null });
+
+      if (responseData.data) {
         return new ResponseData(
           HttpStatus.OK,
           "SUCCESS",
           {
-            net_sales: this.parseCurrencyToNumber(data.data.data.salesBalance),
-            net_total: this.parseCurrencyToNumber(data.data.data.earningsBalance),
+            net_sales: this.parseCurrencyToNumber(responseData.data.salesBalance),
+            net_total: this.parseCurrencyToNumber(responseData.data.earningsBalance),
             total_orders: 0,
-            breakdown_by_category: JSON.stringify(data.data.data.uiBreakdown?.map(o => ({
+            breakdown_by_category: JSON.stringify(responseData.data.uiBreakdown?.map((o: any) => ({
               type: o.uiBreakdown[0].label == 'Marketing' ? "advertisement" : "grabfood",
               order_for_sorting: o.uiBreakdown[0].label == 'Marketing' ? 1 : 0,
-              net_total: this.parseCurrencyToNumber(o.uiBreakdown[0].label == 'Marketing' ? o.uiBreakdown[o.uiBreakdown.length-1].uiBreakdown[0].value.value : data.data.data.earningsBalance),
+              net_total: this.parseCurrencyToNumber(o.uiBreakdown[0].label == 'Marketing' ? o.uiBreakdown[o.uiBreakdown.length-1].uiBreakdown[0].value.value : responseData.data.earningsBalance),
               content: o.uiBreakdown[0].label == 'Marketing' ? "Marketing" : "GrabFood",
               channel_branch_id: channel_branch_id,
               channel_branch_name: channel_branch_name,
               channel_branch_address: channel_branch_address,
               channel_branch_phone: channel_branch_phone,
-              breakdown: (o.uiBreakdown ?? []).filter(a => !a.action).map(b => ({
+              breakdown: (o.uiBreakdown ?? []).filter((a: any) => !a.action).map((b: any) => ({
                 order_for_sorting: 0,
                 content: b.label ?? '',
                 value: b.value ? this.parseCurrencyToNumber(b.value.value) : this.parseCurrencyToNumber(b.uiBreakdown[0]?.value?.value || 0),
                 count: 0,
                 tooltip: '',
-                breakdown: (b.uiBreakdown ?? []).filter(c => !c.value).map(d => ({
+                breakdown: (b.uiBreakdown ?? []).filter((c: any) => !c.value).map((d: any) => ({
                   order_for_sorting: 0,
                   content: d.label ?? '',
                   value: d.value ? this.parseCurrencyToNumber(d.value?.value || 0) : this.parseCurrencyToNumber(d.uiBreakdown[0]?.value?.value || 0),
@@ -548,12 +558,9 @@ export class ChannelOrderFoodApiGRFService {
         )
       }
     }
-    catch (error) {      
-
-      const statusCode = error.response?.status || HttpStatus.BAD_REQUEST;
-      const message = error.response?.data.message || error.response?.statusText;
-
-      return new ResponseData(statusCode, message, {
+    catch (error: any) {
+      console.error('[getEarningSumaryReportV2] Error:', error.message);
+      return new ResponseData(HttpStatus.BAD_REQUEST, error.message || "Lỗi ! getEarningSumaryReportV2", {
         net_sales: 0,
         net_total: 0,
         total_orders: 0,

@@ -42,12 +42,18 @@ async function bootstrap() {
     app.useGlobalPipes(
       new ValidationPipe({
         exceptionFactory: (validationErrors: ValidationError[] = []) => {
+          // Safely get the first validation error message
+          const firstError = validationErrors[0];
+          const errorMessage = firstError?.constraints
+            ? Object.values(firstError.constraints)[0]
+            : 'Validation failed';
+
           throw new HttpException(
             new ExceptionResponseDetail(
               HttpStatus.BAD_REQUEST,
-              Object.values(validationErrors[0].constraints)[0]
+              errorMessage
             ),
-            HttpStatus.OK
+            HttpStatus.BAD_REQUEST // Fixed: Return correct HTTP status code
           );
         },
       })
@@ -59,10 +65,17 @@ async function bootstrap() {
     let moment = require('moment-timezone');
     console.log(moment().tz("Asia/Ho_Chi_Minh").format());
   
-    if (["local","beta", "staging"].includes(process.env.CONFIG_ENV_MODE)) {
-        for (const k in envConfig) {
-        console.log(`${k}=${envConfig[k]}`);
+    // Log only non-sensitive configuration in development
+    if (["local", "beta", "staging"].includes(process.env.CONFIG_ENV_MODE)) {
+      const sensitiveKeys = ['PASSWORD', 'SECRET', 'TOKEN', 'KEY', 'CREDENTIAL'];
+      console.log('=== Application Configuration (non-sensitive) ===');
+      for (const k in envConfig) {
+        const isSensitive = sensitiveKeys.some(sk => k.toUpperCase().includes(sk));
+        if (!isSensitive) {
+          console.log(`${k}=${envConfig[k]}`);
+        }
       }
+      console.log('=================================================');
     }  
     
     

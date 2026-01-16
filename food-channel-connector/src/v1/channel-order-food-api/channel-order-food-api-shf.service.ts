@@ -1,7 +1,5 @@
 // channel-order-food-api.service.ts
-import { HttpService } from '@nestjs/axios';
 import { HttpStatus, Injectable } from '@nestjs/common';
-import { lastValueFrom } from 'rxjs';
 import { UtilsBaseFunction } from 'src/utils.common/utils.base-function.commom/utils.base-function.comom';
 import { ChannelOrderFoodApiEnum } from 'src/utils.common/utils.enum.common/utils.channel-order-food-api.enum';
 import { ResponseData } from 'src/utils.common/utils.response.common/utils.response.common';
@@ -12,10 +10,19 @@ const execAsync = promisify(exec);
 
 @Injectable()
 export class ChannelOrderFoodApiSHFService {
-  constructor(
-    private readonly httpService: HttpService
+  constructor() { }
 
-  ) { }
+  /**
+   * Safe JSON parse với error handling
+   */
+  private safeJsonParse<T>(jsonString: string, defaultValue: T): T {
+    try {
+      return JSON.parse(jsonString);
+    } catch (error) {
+      console.error('[safeJsonParse] Failed to parse JSON:', error);
+      return defaultValue;
+    }
+  }
 
   // -------------------------------- SHF --------------------------------
   /**
@@ -54,6 +61,15 @@ export class ChannelOrderFoodApiSHFService {
     return headers;
   }
 
+  /**
+   * Tạo header strings từ object headers cho curl command
+   */
+  private createHeaderStrings(headers: Record<string, string>): string {
+    return Object.entries(headers)
+      .map(([key, value]) => `--header '${key}: ${value}'`)
+      .join(' \\\n  ');
+  }
+
   async getSHFFoodList(url: string, access_token: string, x_foody_entity_id: number): Promise<any> {
     try {
 
@@ -63,16 +79,17 @@ export class ChannelOrderFoodApiSHFService {
       .map(([key, value]) => `--header '${key}: ${value}'`)
       .join(' \\\n  ');
 
-      const curlCommand = `curl -X GET --location "${url}" \
+      const curlCommand = `curl -s -X GET --location "${url}" \
       ${headerStrings} \
       --header 'x-foody-access-token: ${access_token}' \
       --header 'x-foody-entity-id: ${x_foody_entity_id}'`;
 
       const result = await execAsync(curlCommand);
-      
-      const catalogs = JSON.parse(result.stdout).data.catalogs;
-      const allDishes = catalogs.reduce((accumulator, catalog) => {
-        const dishes = catalog.dishes.map(dish => ({
+      const data = this.safeJsonParse(result.stdout, { data: { catalogs: [] } });
+
+      const catalogs = data.data?.catalogs || [];
+      const allDishes = catalogs.reduce((accumulator: any[], catalog: any) => {
+        const dishes = (catalog.dishes || []).map((dish: any) => ({
           id: dish.id,
           name: dish.name,
           price: dish.price,
@@ -84,12 +101,12 @@ export class ChannelOrderFoodApiSHFService {
       }, []);
       return new ResponseData(HttpStatus.OK, "SUCCESS", allDishes);
 
-    } catch (error) {
+    } catch (error: any) {
+      console.error('[getSHFFoodList] Error:', error.message);
+      const statusCode = HttpStatus.BAD_REQUEST;
+      const message = error.message || "Lỗi rồi getSHFFoodList";
 
-      const statusCode = error.response?.status || HttpStatus.BAD_REQUEST;
-      const message = error.response?.statusText || "Lỗi rồi getSHFFoodList";
-
-      return new ResponseData(statusCode, message, []);    
+      return new ResponseData(statusCode, message, []);
     }
   }
 
@@ -100,26 +117,19 @@ export class ChannelOrderFoodApiSHFService {
       const headerStrings = Object.entries(JSON.parse(headers))
       .map(([key, value]) => `--header '${key}: ${value}'`)
       .join(' \\\n  ');
-      
-      // const curlCommand = `curl -X GET --location "${url}" \
-      // --header 'user-agent: language=vi app_type=29' \
-      // --header 'x-foody-access-token: ${access_token}' \
-      // --header 'x-foody-app-type: 1024' \
-      // --header 'x-foody-entity-id: ${x_foody_entity_id}' \
-      // --header 'Content-Type: application/json'`;
 
-      const curlCommand = `curl -X GET --location "${url}" \
+      const curlCommand = `curl -s -X GET --location "${url}" \
       ${headerStrings} \
       --header 'x-foody-access-token: ${access_token}' \
       --header 'x-foody-entity-id: ${x_foody_entity_id}'`;
 
       const resultRaw = await execAsync(curlCommand);
-      // const info = JSON.parse(resultRaw.stdout).data.order;
+      const data = this.safeJsonParse(resultRaw.stdout, { data: { option_groups: [] } });
 
-      const result = JSON.parse(resultRaw.stdout).data.option_groups.map(group => ({
+      const result = (data.data?.option_groups || []).map((group: any) => ({
         id: group.id,
-        name: group.name.trim(),
-        list: group.options.map(option => ({
+        name: (group.name || '').trim(),
+        list: (group.options || []).map((option: any) => ({
           id: option.id,
           name: option.name,
           price: option.price,
@@ -128,12 +138,12 @@ export class ChannelOrderFoodApiSHFService {
 
       return new ResponseData(HttpStatus.OK, "SUCCESS", result);
 
-    } catch (error) {      
+    } catch (error: any) {
+      console.error('[getSHFFoodToppingList] Error:', error.message);
+      const statusCode = HttpStatus.BAD_REQUEST;
+      const message = error.message || "Lỗi rồi getSHFFoodToppingList";
 
-      const statusCode = error.response?.status || HttpStatus.BAD_REQUEST;
-      const message = error.response?.statusText || "Lỗi rồi getSHFFoodList";
-
-      return new ResponseData(statusCode, message, []);    
+      return new ResponseData(statusCode, message, []);
     }
   }
 
@@ -147,14 +157,14 @@ export class ChannelOrderFoodApiSHFService {
       .map(([key, value]) => `--header '${key}: ${value}'`)
       .join(' \\\n  ');
 
-      const curlCommand = `curl -X GET --location "${fullUrl}" \
+      const curlCommand = `curl -s -X GET --location "${fullUrl}" \
       ${headerStrings} \
       --header 'x-foody-access-token: ${access_token}' \
       --header 'x-foody-entity-id: ${x_foody_entity_id}'`;
 
       const resultRaw = await execAsync(curlCommand);
 
-      const data = JSON.parse(resultRaw.stdout);
+      const data = this.safeJsonParse(resultRaw.stdout, { data: null });
 
       if (data.data != null) {
         return {
@@ -189,23 +199,31 @@ export class ChannelOrderFoodApiSHFService {
 
   async updateSHFFoodPrices(foods: any[], url: string, access_token: string, x_foody_entity_id: number): Promise<any> {
     try {
-      const headers = await this.buildSHFHeaders({
+      const headersObj = await this.buildSHFHeaders({
         access_token,
         x_foody_entity_id,
         contentType: true,
       });
 
+      const headerStrings = this.createHeaderStrings(headersObj);
+
       let countError = 0;
 
       for (const food of foods) {
 
-        const body = {
+        const body = JSON.stringify({
           dish_id: +food.id,
           price: +food.price
-        };
+        });
 
-        let data = await lastValueFrom(this.httpService.post(url, JSON.stringify(body), { headers }));
-        if (data.data.code != 0) {
+        const curlCommand = `curl -s -X POST '${url}' \
+          ${headerStrings} \
+          --data '${body.replace(/'/g, "'\\''")}'`;
+
+        const result = await execAsync(curlCommand);
+        const data = this.safeJsonParse(result.stdout, { code: -1 });
+
+        if (data.code != 0) {
           countError = countError + 1;
           break;
         }
@@ -213,11 +231,16 @@ export class ChannelOrderFoodApiSHFService {
       if (countError > 0) {
         for (const food of foods) {
 
-          const body = {
+          const body = JSON.stringify({
             dish_id: +food.id,
             price: +food.orinal_price
-          };
-          await lastValueFrom(this.httpService.post(url, JSON.stringify(body), { headers }));
+          });
+
+          const curlCommand = `curl -s -X POST '${url}' \
+            ${headerStrings} \
+            --data '${body.replace(/'/g, "'\\''")}'`;
+
+          await execAsync(curlCommand);
         }
       }
 
@@ -231,23 +254,31 @@ export class ChannelOrderFoodApiSHFService {
 
   async getSHFBranchList(url: string, x_merchant_token: string): Promise<any> {
     try {
-      const headers = await this.buildSHFHeaders({
+      const headersObj = await this.buildSHFHeaders({
         x_merchant_token,
       });
 
-      const body = {
-        page_size: 999999
-      };
+      const headerStrings = this.createHeaderStrings(headersObj);
 
-      const data = await lastValueFrom(this.httpService.post(url, body, { headers }));
-      
-      if(data.data.error_code == 10007){
+      const body = JSON.stringify({
+        page_size: 999999
+      });
+
+      const curlCommand = `curl -s -X POST '${url}' \
+        ${headerStrings} \
+        --header 'Content-Type: application/json' \
+        --data '${body.replace(/'/g, "'\\''")}'`;
+
+      const result = await execAsync(curlCommand);
+      const data = this.safeJsonParse(result.stdout, { error_code: 0, data: { store_list: [] } });
+
+      if(data.error_code == 10007){
         return new ResponseData(HttpStatus.UNAUTHORIZED, "Vui lòng cập nhập token cho app SHF", []);
 
       }else {
-        const storeList = data.data.data.store_list;
+        const storeList = data.data?.store_list || [];
 
-          const allBranches = storeList.map(store => ({
+          const allBranches = storeList.map((store: any) => ({
           merchant_id : '0',
           branch_id: store.store_id,
           branch_name: store.store_name,
@@ -255,11 +286,11 @@ export class ChannelOrderFoodApiSHFService {
         return new ResponseData(HttpStatus.OK, "SUCCESS", allBranches);
       }
 
-      
-    } catch (error) {
 
-      const statusCode = error.response?.status || HttpStatus.BAD_REQUEST;
-      const message = error.response?.statusText || "Lỗi rồi getSHFBillNewList";
+    } catch (error: any) {
+      console.error('[getSHFBranchList] Error:', error.message);
+      const statusCode = HttpStatus.BAD_REQUEST;
+      const message = error.message || "Lỗi rồi getSHFBranchList";
 
       return new ResponseData(statusCode, message, []);
     }
@@ -268,54 +299,63 @@ export class ChannelOrderFoodApiSHFService {
 
   async getSHFBillNewList(url: string, access_token: string, x_foody_entity_id: number): Promise<any> {
     try {
-      const headers = await this.buildSHFHeaders({
+      const headersObj = await this.buildSHFHeaders({
         access_token,
         x_foody_entity_id,
       });
 
-      const body = {
+      const headerStrings = this.createHeaderStrings(headersObj);
+
+      const body = JSON.stringify({
         "order_filter_type": 31,
         "next_item_id": "",
         "request_count": 500000,
         "sort_type": 5
-      }
+      });
 
-      const data = await lastValueFrom(this.httpService.post(url, JSON.stringify(body), { headers }));
-      
-      const orders = data.data.data.orders.map(o => ({
+      const curlCommand = `curl -s -X POST '${url}' \
+        ${headerStrings} \
+        --header 'Content-Type: application/json' \
+        --data '${body.replace(/'/g, "'\\''")}'`;
+
+      const result = await execAsync(curlCommand);
+      const data = this.safeJsonParse(result.stdout, { data: { orders: [] } });
+
+      const orders = (data.data?.orders || []).map((o: any) => ({
         order_id: o.id,
         order_code: o.code,
         total_amount: o.total_value_amount,
-        discount_amount : o.commission.amount,
+        discount_amount : o.commission?.amount || 0,
         order_amount : o.order_value_amount ,
-        customer_order_amount : o.customer_bill.total_amount, 
-        customer_discount_amount : o.customer_bill.total_discount, 
+        customer_order_amount : o.customer_bill?.total_amount || 0,
+        customer_discount_amount : o.customer_bill?.total_discount || 0,
         created_at: o.order_time,
         order_status: o.order_status,
-        driver_name: o.assignee.name,
-        driver_avatar: o.assignee.avatar_url,
+        driver_name: o.assignee?.name || '',
+        driver_avatar: o.assignee?.avatar_url || '',
         foods:
-          o.order_items.map(f => ({
-            food_id: f.dish.id,
-            price: f.dish.original_price,
-            food_price_addition : f.original_price,
-            food_name: f.dish.name,
+          (o.order_items || []).map((f: any) => ({
+            food_id: f.dish?.id || 0,
+            price: f.dish?.original_price || 0,
+            food_price_addition : f.original_price || 0,
+            food_name: f.dish?.name || '',
             quantity: f.quantity,
             note : !f.note ? '' : f.note,
-            options : f.options_groups.flatMap(group =>
-                  group.options.map(option => ({
+            options : (f.options_groups || []).flatMap((group: any) =>
+                  (group.options || []).map((option: any) => ({
                   name: option.name,
                   price : option.original_price,
                   quantity: option.quantity
               })))
           }))
 
-      }));                        
-      
+      }));
+
       return new ResponseData(HttpStatus.OK, "SUCCESS", orders);
-    } catch (error) {      
-      const statusCode = error.response?.status || HttpStatus.BAD_REQUEST;
-      const message = error.response?.statusText || "Lỗi ! getSHFBillNewList";
+    } catch (error: any) {
+      console.error('[getSHFBillNewList] Error:', error.message);
+      const statusCode = HttpStatus.BAD_REQUEST;
+      const message = error.message || "Lỗi ! getSHFBillNewList";
 
       return new ResponseData(statusCode, message, []);
 
@@ -325,36 +365,44 @@ export class ChannelOrderFoodApiSHFService {
 
   async getSHFBillHistoryList(url: string, access_token: string, x_foody_entity_id: number): Promise<any> {
     try {
-      const headers = await this.buildSHFHeaders({
+      const headersObj = await this.buildSHFHeaders({
         access_token,
         x_foody_entity_id,
       });
+
+      const headerStrings = this.createHeaderStrings(headersObj);
 
       const now = new Date();
       const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
       const timestampStartOfDay = Math.floor(startOfDay.getTime() / 1000);
 
-      const body = {
+      const body = JSON.stringify({
         "order_filter_type": 40,
         "next_item_id": "",
         "request_count": 10000,
         "from_time": timestampStartOfDay,
         "to_time": (timestampStartOfDay + 86399),
         "sort_type": 12
-      };
-      
-      const data = await lastValueFrom(this.httpService.post(url, JSON.stringify(body), { headers }));      
+      });
 
-      const orders = data.data.data.orders.map(o => ({
+      const curlCommand = `curl -s -X POST '${url}' \
+        ${headerStrings} \
+        --header 'Content-Type: application/json' \
+        --data '${body.replace(/'/g, "'\\''")}'`;
+
+      const result = await execAsync(curlCommand);
+      const data = this.safeJsonParse(result.stdout, { data: { orders: [] } });
+
+      const orders = (data.data?.orders || []).map((o: any) => ({
         order_id: o.id,
         order_status: o.order_status
-      }));      
+      }));
 
       return new ResponseData(HttpStatus.OK, "SUCCESS", orders);
-    } catch (error) {
-
-      const statusCode = error.response?.status || HttpStatus.BAD_REQUEST;
-      const message = error.response?.statusText || "Lỗi ! getSHFBillHistoryList";
+    } catch (error: any) {
+      console.error('[getSHFBillHistoryList] Error:', error.message);
+      const statusCode = HttpStatus.BAD_REQUEST;
+      const message = error.message || "Lỗi ! getSHFBillHistoryList";
 
       return new ResponseData(statusCode, message, []);
     }
@@ -363,27 +411,37 @@ export class ChannelOrderFoodApiSHFService {
   async getSHFBillDetail(url: string, access_token: string, x_foody_entity_id: number , order_id : string , order_code : string): Promise<any> {
     try {
       const fullUrl = `${url}?order_id=${order_id}&order_code=${order_code}`;
-      const headers = await this.buildSHFHeaders({
+      const headersObj = await this.buildSHFHeaders({
         access_token,
         x_foody_entity_id,
       });
 
-      const data = await lastValueFrom(this.httpService.get(fullUrl, { headers }));
+      const headerStrings = this.createHeaderStrings(headersObj);
 
-      const info  = data.data.data.order ; 
-      
+      const curlCommand = `curl -s -X GET '${fullUrl}' \
+        ${headerStrings}`;
+
+      const result = await execAsync(curlCommand);
+      const data = this.safeJsonParse(result.stdout, { data: { order: null } });
+
+      const info = data.data?.order;
+
+      if (!info) {
+        return new ResponseData(HttpStatus.BAD_REQUEST, "Order not found", {});
+      }
+
       return new ResponseData(HttpStatus.OK, "SUCCESS", {
                                                           order_id: info.id,
                                                           order_code : info.code,
-                                                          customer_phone : !info.order_user.phone ? '' : info.order_user.phone,
-                                                          customer_name : !info.order_user.name ? '' : info.order_user.name,
-                                                          customer_address : !info.deliver_address.address ? '' : info.deliver_address.address
+                                                          customer_phone : !info.order_user?.phone ? '' : info.order_user.phone,
+                                                          customer_name : !info.order_user?.name ? '' : info.order_user.name,
+                                                          customer_address : !info.deliver_address?.address ? '' : info.deliver_address.address
                                                         });
-     
-    } catch (error) {
 
-      const statusCode = error.response?.status || HttpStatus.BAD_REQUEST;
-      const message = error.response?.statusText || "Lỗi ! getSHFBillHistoryList";
+    } catch (error: any) {
+      console.error('[getSHFBillDetail] Error:', error.message);
+      const statusCode = HttpStatus.BAD_REQUEST;
+      const message = error.message || "Lỗi ! getSHFBillDetail";
 
       return new ResponseData(statusCode, message, {});
     }
@@ -393,24 +451,34 @@ export class ChannelOrderFoodApiSHFService {
   async getSHFBillDetailUpdateStatus(url: string, access_token: string, x_foody_entity_id: number , order_id : string , order_code : string): Promise<any> {
     try {
       const fullUrl = `${url}?order_id=${order_id}&order_code=${order_code}`;
-      const headers = await this.buildSHFHeaders({
+      const headersObj = await this.buildSHFHeaders({
         access_token,
         x_foody_entity_id,
       });
 
-      const data = await lastValueFrom(this.httpService.get(fullUrl, { headers }));
+      const headerStrings = this.createHeaderStrings(headersObj);
 
-      const info  = data.data.data.order ; 
-      
+      const curlCommand = `curl -s -X GET '${fullUrl}' \
+        ${headerStrings}`;
+
+      const result = await execAsync(curlCommand);
+      const data = this.safeJsonParse(result.stdout, { data: { order: null } });
+
+      const info = data.data?.order;
+
+      if (!info) {
+        return new ResponseData(HttpStatus.BAD_REQUEST, "Order not found", {});
+      }
+
       return new ResponseData(HttpStatus.OK, "SUCCESS", {
                                                           order_id: info.id,
                                                           order_status: info.order_status
                                                         });
-     
-    } catch (error) {
 
-      const statusCode = error.response?.status || HttpStatus.BAD_REQUEST;
-      const message = error.response?.statusText || "Lỗi ! getSHFBillHistoryList";
+    } catch (error: any) {
+      console.error('[getSHFBillDetailUpdateStatus] Error:', error.message);
+      const statusCode = HttpStatus.BAD_REQUEST;
+      const message = error.message || "Lỗi ! getSHFBillDetailUpdateStatus";
 
       return new ResponseData(statusCode, message, {});
     }
@@ -425,7 +493,7 @@ export class ChannelOrderFoodApiSHFService {
       .map(([key, value]) => `--header '${key}: ${value}'`)
       .join(' \\\n  ');
 
-      const curlCommand = `curl -X POST --location "${url}" \
+      const curlCommand = `curl -s -X POST --location "${url}" \
       ${headerStrings} \
       --header 'x-foody-access-token: ${access_token}' \
       --header 'x-foody-entity-id: ${x_foody_entity_id}' \
@@ -435,12 +503,13 @@ export class ChannelOrderFoodApiSHFService {
 
       const resultRaw = await execAsync(curlCommand);
 
-      const result = JSON.parse(resultRaw.stdout);   
-            
-      return new ResponseData( result.code == 0 ? HttpStatus.OK : HttpStatus.BAD_REQUEST, result.msg);
-    } catch (error) {      
-      const statusCode = error.response?.status || HttpStatus.BAD_REQUEST;
-      const message = error.response?.statusText || "Lỗi ! getSHFBillNewList";
+      const result = this.safeJsonParse(resultRaw.stdout, { code: -1, msg: '' });
+
+      return new ResponseData( result.code == 0 ? HttpStatus.OK : HttpStatus.BAD_REQUEST, result.msg || (result.code == 0 ? "SUCCESS" : "Error"));
+    } catch (error: any) {
+      console.error('[confirmSHFBill] Error:', error.message);
+      const statusCode = HttpStatus.BAD_REQUEST;
+      const message = error.message || "Lỗi ! confirmSHFBill";
 
       return new ResponseData(statusCode, message, []);
 
