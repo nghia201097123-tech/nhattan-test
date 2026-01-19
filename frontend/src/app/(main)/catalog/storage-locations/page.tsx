@@ -72,7 +72,8 @@ export default function StorageLocationsPage() {
     if (!selectedWarehouse) return;
     setLoading(true);
     try {
-      const result = await storageLocationsService.getTree(selectedWarehouse);
+      // Get flat data for parent options and build tree locally
+      const result = await storageLocationsService.getByWarehouse(selectedWarehouse);
       setFlatData(result);
       setTreeData(buildTree(result));
     } catch (error) {
@@ -112,7 +113,12 @@ export default function StorageLocationsPage() {
 
   const handleSubmit = async (values: any) => {
     try {
-      const payload = { ...values, warehouseId: selectedWarehouse };
+      const payload = {
+        ...values,
+        warehouseId: selectedWarehouse,
+        // Clear parentId for CABINET type
+        parentId: values.type === 'CABINET' ? null : values.parentId,
+      };
       if (editingItem) {
         await storageLocationsService.update(editingItem.id, payload);
         message.success('Cập nhật thành công');
@@ -256,12 +262,16 @@ export default function StorageLocationsPage() {
             {({ getFieldValue }) => {
               const type = getFieldValue('type');
               const options = getParentOptions(type);
+              const parentLabel = type === 'SHELF' ? 'Thuộc Tủ' : 'Thuộc Kệ';
               return type && type !== 'CABINET' ? (
-                <Form.Item name="parentId" label="Thuộc về">
+                <Form.Item
+                  name="parentId"
+                  label={parentLabel}
+                  rules={[{ required: true, message: `Vui lòng chọn ${type === 'SHELF' ? 'Tủ' : 'Kệ'}` }]}
+                >
                   <Select
                     options={options.map((o) => ({ label: o.name, value: o.id }))}
-                    placeholder="Chọn vị trí cha"
-                    allowClear
+                    placeholder={`Chọn ${type === 'SHELF' ? 'Tủ' : 'Kệ'}`}
                   />
                 </Form.Item>
               ) : null;
