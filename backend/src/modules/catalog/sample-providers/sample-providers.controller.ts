@@ -14,9 +14,9 @@ import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { SampleProvidersService } from './sample-providers.service';
 import { CreateSampleProviderDto } from './dto/create-sample-provider.dto';
 import { UpdateSampleProviderDto } from './dto/update-sample-provider.dto';
+import { QuerySampleProviderDto } from './dto/query-sample-provider.dto';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../../common/decorators/current-user.decorator';
-import { PaginationDto } from '../../../common/dto/pagination.dto';
 
 @ApiTags('Catalog - Sample Providers')
 @ApiBearerAuth()
@@ -27,11 +27,8 @@ export class SampleProvidersController {
 
   @Get()
   @ApiOperation({ summary: 'Get all sample providers' })
-  async findAll(
-    @Query() query: PaginationDto,
-    @Query('type') type?: string,
-  ) {
-    return this.service.findAll(query, type);
+  async findAll(@Query() query: QuerySampleProviderDto) {
+    return this.service.findAll(query);
   }
 
   @Get(':id')

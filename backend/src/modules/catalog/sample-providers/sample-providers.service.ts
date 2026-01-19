@@ -4,7 +4,8 @@ import { Repository } from 'typeorm';
 import { SampleProvider, ProviderType } from './entities/sample-provider.entity';
 import { CreateSampleProviderDto } from './dto/create-sample-provider.dto';
 import { UpdateSampleProviderDto } from './dto/update-sample-provider.dto';
-import { PaginationDto, createPaginatedResult } from '../../../common/dto/pagination.dto';
+import { QuerySampleProviderDto } from './dto/query-sample-provider.dto';
+import { createPaginatedResult } from '../../../common/dto/pagination.dto';
 
 @Injectable()
 export class SampleProvidersService {
@@ -13,8 +14,8 @@ export class SampleProvidersService {
     private readonly repository: Repository<SampleProvider>,
   ) {}
 
-  async findAll(query: PaginationDto, type?: string) {
-    const { page, limit, search, sortBy, sortOrder } = query;
+  async findAll(query: QuerySampleProviderDto) {
+    const { page, limit, search, sortBy, sortOrder, type } = query;
     const skip = (page - 1) * limit;
 
     const queryBuilder = this.repository
