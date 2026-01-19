@@ -285,6 +285,9 @@ export class StorageLocationsService {
     let needUpdatePath = false;
     if (dto.parentId !== undefined && dto.parentId !== location.parentId) {
       needUpdatePath = true;
+      // IMPORTANT: Clear the parent relation so TypeORM uses parentId column
+      (location as any).parent = null;
+
       if (dto.parentId) {
         const parent = await this.findById(dto.parentId);
         location.level = parent.level + 1;
@@ -295,8 +298,15 @@ export class StorageLocationsService {
       }
     }
 
+    // Clear relations to avoid TypeORM overriding foreign keys
+    (location as any).parent = undefined;
+    (location as any).children = undefined;
+    (location as any).warehouse = undefined;
+
     Object.assign(location, dto);
+    console.log('Location before save:', { id: location.id, parentId: location.parentId, level: location.level });
     const saved = await this.repository.save(location);
+    console.log('Location after save:', { id: saved.id, parentId: saved.parentId, level: saved.level });
 
     // If parent changed, also need to update children's paths recursively
     if (needUpdatePath) {
