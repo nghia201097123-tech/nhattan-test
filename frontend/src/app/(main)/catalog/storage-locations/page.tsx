@@ -21,6 +21,8 @@ import {
   PlusOutlined,
   EditOutlined,
   DeleteOutlined,
+  DatabaseOutlined,
+  AppstoreOutlined,
   InboxOutlined,
 } from '@ant-design/icons';
 import { storageLocationsService, warehousesService } from '@/services/catalog.service';
@@ -33,9 +35,31 @@ const locationTypes = [
   { value: 'COMPARTMENT', label: 'Ngăn' },
 ];
 
+// Config for each location type: icon, colors
+const typeConfig: Record<string, { icon: React.ReactNode; bgColor: string; borderColor: string; tagColor: string }> = {
+  CABINET: {
+    icon: <DatabaseOutlined />,
+    bgColor: '#e6f4ff',
+    borderColor: '#1677ff',
+    tagColor: 'blue',
+  },
+  SHELF: {
+    icon: <AppstoreOutlined />,
+    bgColor: '#f6ffed',
+    borderColor: '#52c41a',
+    tagColor: 'green',
+  },
+  COMPARTMENT: {
+    icon: <InboxOutlined />,
+    bgColor: '#fff7e6',
+    borderColor: '#fa8c16',
+    tagColor: 'orange',
+  },
+};
+
 const statusColors: Record<string, string> = {
   EMPTY: 'green',
-  PARTIAL: 'orange',
+  PARTIAL: 'gold',
   FULL: 'red',
 };
 
@@ -152,20 +176,34 @@ export default function StorageLocationsPage() {
   };
 
   const titleRender = (node: any) => {
-    const usagePercent = node.capacity ? Math.round((node.currentUsage / node.capacity) * 100) : 0;
+    const config = typeConfig[node.type] || typeConfig.COMPARTMENT;
+    const typeLabel = locationTypes.find((t) => t.value === node.type)?.label;
+
     return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
-        <span>
-          <InboxOutlined style={{ marginRight: 8 }} />
-          {node.name}
-          <Tag style={{ marginLeft: 8 }}>{locationTypes.find((t) => t.value === node.type)?.label}</Tag>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          width: '100%',
+          padding: '8px 12px',
+          backgroundColor: config.bgColor,
+          borderLeft: `4px solid ${config.borderColor}`,
+          borderRadius: 4,
+          marginBottom: 4,
+        }}
+      >
+        <Space>
+          <span style={{ color: config.borderColor, fontSize: 18 }}>{config.icon}</span>
+          <span style={{ fontWeight: 500 }}>{node.name}</span>
+          <Tag color={config.tagColor}>{typeLabel}</Tag>
           <Tag color={statusColors[node.status]}>{statusLabels[node.status]}</Tag>
           {node.capacity && (
-            <span style={{ marginLeft: 8, fontSize: 12, color: '#666' }}>
+            <span style={{ fontSize: 12, color: '#666' }}>
               ({node.currentUsage}/{node.capacity})
             </span>
           )}
-        </span>
+        </Space>
         <Space size="small">
           <Button
             type="text"
@@ -256,7 +294,26 @@ export default function StorageLocationsPage() {
             label="Loại vị trí"
             rules={[{ required: true, message: 'Vui lòng chọn loại' }]}
           >
-            <Select options={locationTypes} placeholder="Chọn loại" />
+            <Select placeholder="Chọn loại">
+              <Select.Option value="CABINET">
+                <Space>
+                  <DatabaseOutlined style={{ color: '#1677ff' }} />
+                  <span>Tủ</span>
+                </Space>
+              </Select.Option>
+              <Select.Option value="SHELF">
+                <Space>
+                  <AppstoreOutlined style={{ color: '#52c41a' }} />
+                  <span>Kệ</span>
+                </Space>
+              </Select.Option>
+              <Select.Option value="COMPARTMENT">
+                <Space>
+                  <InboxOutlined style={{ color: '#fa8c16' }} />
+                  <span>Ngăn</span>
+                </Space>
+              </Select.Option>
+            </Select>
           </Form.Item>
           <Form.Item noStyle shouldUpdate={(prev, cur) => prev.type !== cur.type}>
             {({ getFieldValue }) => {
