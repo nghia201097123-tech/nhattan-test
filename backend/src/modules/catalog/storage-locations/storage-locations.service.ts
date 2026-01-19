@@ -5,12 +5,15 @@ import { StorageLocation, StorageLocationStatus, StorageLocationType } from './e
 import { CreateStorageLocationDto } from './dto/create-storage-location.dto';
 import { UpdateStorageLocationDto } from './dto/update-storage-location.dto';
 import { buildTree, generatePath } from '../../../common/utils/tree.util';
+import { Warehouse } from '../warehouses/entities/warehouse.entity';
 
 @Injectable()
 export class StorageLocationsService {
   constructor(
     @InjectRepository(StorageLocation)
     private readonly repository: Repository<StorageLocation>,
+    @InjectRepository(Warehouse)
+    private readonly warehouseRepository: Repository<Warehouse>,
   ) {}
 
   async findAll(warehouseId?: string): Promise<StorageLocation[]> {
@@ -111,6 +114,40 @@ export class StorageLocationsService {
     }
   }
 
+  // Helper: Get total capacity of all cabinets in a warehouse
+  private async getCabinetsTotalCapacity(warehouseId: string, excludeId?: string): Promise<number> {
+    const cabinets = await this.repository.find({
+      where: { warehouseId, type: StorageLocationType.CABINET },
+    });
+    return cabinets
+      .filter(cabinet => cabinet.id !== excludeId)
+      .reduce((sum, cabinet) => sum + (cabinet.capacity || 0), 0);
+  }
+
+  // Helper: Validate cabinet capacity against warehouse capacity
+  private async validateCabinetCapacityAgainstWarehouse(
+    warehouseId: string,
+    newCapacity: number,
+    excludeCabinetId?: string,
+  ): Promise<void> {
+    const warehouse = await this.warehouseRepository.findOne({ where: { id: warehouseId } });
+    if (!warehouse) {
+      throw new NotFoundException('Không tìm thấy kho');
+    }
+    if (!warehouse.maxCapacity) return; // Warehouse has no capacity limit
+
+    const existingCabinetsCapacity = await this.getCabinetsTotalCapacity(warehouseId, excludeCabinetId);
+    const totalAfterAdd = existingCabinetsCapacity + newCapacity;
+
+    if (totalAfterAdd > warehouse.maxCapacity) {
+      const remaining = warehouse.maxCapacity - existingCabinetsCapacity;
+      throw new BadRequestException(
+        `Sức chứa vượt quá giới hạn của Kho (${warehouse.maxCapacity}). ` +
+        `Sức chứa còn lại: ${remaining}, yêu cầu: ${newCapacity}`
+      );
+    }
+  }
+
   async create(dto: CreateStorageLocationDto): Promise<StorageLocation> {
     // Check duplicate code in same warehouse
     const existingCode = await this.repository.findOne({
@@ -125,6 +162,10 @@ export class StorageLocationsService {
       // CABINET (Tủ) should not have a parent
       if (dto.parentId) {
         throw new BadRequestException('Tủ không thể có vị trí cha');
+      }
+      // Validate cabinet capacity against warehouse capacity
+      if (dto.capacity) {
+        await this.validateCabinetCapacityAgainstWarehouse(dto.warehouseId, dto.capacity);
       }
     } else if (dto.type === StorageLocationType.SHELF) {
       // SHELF (Kệ) must have a CABINET parent
@@ -211,6 +252,14 @@ export class StorageLocationsService {
         if (parent.type !== StorageLocationType.SHELF) {
           throw new BadRequestException('Ngăn chỉ có thể thuộc về Kệ');
         }
+      }
+    }
+
+    // Validate cabinet capacity against warehouse
+    if (newType === StorageLocationType.CABINET) {
+      const capacityToValidate = dto.capacity !== undefined ? dto.capacity : location.capacity;
+      if (capacityToValidate) {
+        await this.validateCabinetCapacityAgainstWarehouse(location.warehouseId, capacityToValidate, id);
       }
     }
 

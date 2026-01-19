@@ -74,6 +74,7 @@ export default function StorageLocationsPage() {
   const [selectedWarehouse, setSelectedWarehouse] = useState<string>();
   const [treeData, setTreeData] = useState<any[]>([]);
   const [flatData, setFlatData] = useState<any[]>([]);
+  const [expandedKeys, setExpandedKeys] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
@@ -100,6 +101,8 @@ export default function StorageLocationsPage() {
       const result = await storageLocationsService.getByWarehouse(selectedWarehouse);
       setFlatData(result);
       setTreeData(buildTree(result));
+      // Expand all nodes by default
+      setExpandedKeys(result.map((item: any) => item.id));
     } catch (error) {
       console.error(error);
     } finally {
@@ -159,9 +162,10 @@ export default function StorageLocationsPage() {
     }
   };
 
-  const handleFormValuesChange = (changedValues: any) => {
-    // Clear parentId when type changes
-    if (changedValues.type) {
+  const handleFormValuesChange = (changedValues: any, allValues: any) => {
+    // Only clear parentId when type changes AND it's a single field change (user action)
+    // Don't clear when form is being initialized with setFieldsValue (multiple fields at once)
+    if (changedValues.type && Object.keys(changedValues).length === 1) {
       form.setFieldValue('parentId', undefined);
     }
   };
@@ -274,7 +278,8 @@ export default function StorageLocationsPage() {
           <Tree
             treeData={treeData}
             titleRender={titleRender}
-            defaultExpandAll
+            expandedKeys={expandedKeys}
+            onExpand={(keys) => setExpandedKeys(keys as string[])}
             blockNode
             style={{ padding: 16 }}
           />
