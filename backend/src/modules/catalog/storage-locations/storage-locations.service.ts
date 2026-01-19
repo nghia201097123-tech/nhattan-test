@@ -69,6 +69,48 @@ export class StorageLocationsService {
     };
   }
 
+  // Helper: Calculate total capacity of children
+  private async getChildrenTotalCapacity(parentId: string, excludeId?: string): Promise<number> {
+    const children = await this.repository.find({ where: { parentId } });
+    return children
+      .filter(child => child.id !== excludeId)
+      .reduce((sum, child) => sum + (child.capacity || 0), 0);
+  }
+
+  // Helper: Validate capacity against parent
+  private async validateCapacityAgainstParent(
+    parentId: string,
+    newCapacity: number,
+    excludeChildId?: string,
+  ): Promise<void> {
+    const parent = await this.findById(parentId);
+    if (!parent.capacity) return; // Parent has no capacity limit
+
+    const existingChildrenCapacity = await this.getChildrenTotalCapacity(parentId, excludeChildId);
+    const totalAfterAdd = existingChildrenCapacity + newCapacity;
+
+    if (totalAfterAdd > parent.capacity) {
+      const remaining = parent.capacity - existingChildrenCapacity;
+      throw new BadRequestException(
+        `Sức chứa vượt quá giới hạn của ${parent.type === StorageLocationType.CABINET ? 'Tủ' : 'Kệ'} cha. ` +
+        `Sức chứa còn lại: ${remaining}, yêu cầu: ${newCapacity}`
+      );
+    }
+  }
+
+  // Helper: Validate parent capacity is not less than children total
+  private async validateParentCapacityNotLessThanChildren(
+    locationId: string,
+    newCapacity: number,
+  ): Promise<void> {
+    const childrenTotal = await this.getChildrenTotalCapacity(locationId);
+    if (newCapacity < childrenTotal) {
+      throw new BadRequestException(
+        `Sức chứa không thể nhỏ hơn tổng sức chứa các vị trí con (${childrenTotal})`
+      );
+    }
+  }
+
   async create(dto: CreateStorageLocationDto): Promise<StorageLocation> {
     // Check duplicate code in same warehouse
     const existingCode = await this.repository.findOne({
@@ -104,6 +146,11 @@ export class StorageLocationsService {
       }
     }
 
+    // Validate capacity against parent
+    if (dto.parentId && dto.capacity) {
+      await this.validateCapacityAgainstParent(dto.parentId, dto.capacity);
+    }
+
     let parentPath: string = null;
     let level = 1;
 
@@ -136,6 +183,19 @@ export class StorageLocationsService {
       });
       if (existingCode) {
         throw new BadRequestException('Mã vị trí đã tồn tại trong kho này');
+      }
+    }
+
+    // Validate capacity changes
+    if (dto.capacity !== undefined && dto.capacity !== location.capacity) {
+      // If this location has children, new capacity must be >= children total
+      if (location.type !== StorageLocationType.COMPARTMENT) {
+        await this.validateParentCapacityNotLessThanChildren(id, dto.capacity);
+      }
+
+      // If this location has a parent, new capacity must not exceed parent's remaining
+      if (location.parentId) {
+        await this.validateCapacityAgainstParent(location.parentId, dto.capacity, id);
       }
     }
 
