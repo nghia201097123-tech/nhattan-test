@@ -159,6 +159,13 @@ export default function StorageLocationsPage() {
     }
   };
 
+  const handleFormValuesChange = (changedValues: any) => {
+    // Clear parentId when type changes
+    if (changedValues.type) {
+      form.setFieldValue('parentId', undefined);
+    }
+  };
+
   const handleDelete = async (id: string) => {
     try {
       await storageLocationsService.delete(id);
@@ -288,7 +295,7 @@ export default function StorageLocationsPage() {
         okText={editingItem ? 'Cập nhật' : 'Thêm mới'}
         cancelText="Hủy"
       >
-        <Form form={form} layout="vertical" onFinish={handleSubmit}>
+        <Form form={form} layout="vertical" onFinish={handleSubmit} onValuesChange={handleFormValuesChange}>
           <Form.Item
             name="type"
             label="Loại vị trí"

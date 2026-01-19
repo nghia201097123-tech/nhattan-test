@@ -175,6 +175,9 @@ export class StorageLocationsService {
 
   async update(id: string, dto: UpdateStorageLocationDto): Promise<StorageLocation> {
     const location = await this.findById(id);
+    const currentType = location.type;
+    const newType = dto.type || currentType;
+    const newParentId = dto.parentId !== undefined ? dto.parentId : location.parentId;
 
     // Check duplicate code if code is being changed
     if (dto.code && dto.code !== location.code) {
@@ -186,21 +189,80 @@ export class StorageLocationsService {
       }
     }
 
+    // Validate hierarchy rules if type or parentId changes
+    if (dto.type !== undefined || dto.parentId !== undefined) {
+      if (newType === StorageLocationType.CABINET) {
+        if (newParentId) {
+          throw new BadRequestException('Tủ không thể có vị trí cha');
+        }
+      } else if (newType === StorageLocationType.SHELF) {
+        if (!newParentId) {
+          throw new BadRequestException('Kệ phải thuộc về một Tủ');
+        }
+        const parent = await this.findById(newParentId);
+        if (parent.type !== StorageLocationType.CABINET) {
+          throw new BadRequestException('Kệ chỉ có thể thuộc về Tủ');
+        }
+      } else if (newType === StorageLocationType.COMPARTMENT) {
+        if (!newParentId) {
+          throw new BadRequestException('Ngăn phải thuộc về một Kệ');
+        }
+        const parent = await this.findById(newParentId);
+        if (parent.type !== StorageLocationType.SHELF) {
+          throw new BadRequestException('Ngăn chỉ có thể thuộc về Kệ');
+        }
+      }
+    }
+
     // Validate capacity changes
+    const newCapacity = dto.capacity !== undefined ? dto.capacity : location.capacity;
     if (dto.capacity !== undefined && dto.capacity !== location.capacity) {
       // If this location has children, new capacity must be >= children total
-      if (location.type !== StorageLocationType.COMPARTMENT) {
+      if (newType !== StorageLocationType.COMPARTMENT) {
         await this.validateParentCapacityNotLessThanChildren(id, dto.capacity);
       }
+    }
 
-      // If this location has a parent, new capacity must not exceed parent's remaining
-      if (location.parentId) {
-        await this.validateCapacityAgainstParent(location.parentId, dto.capacity, id);
+    // Validate capacity against parent (use new parentId if changed)
+    if (newParentId && newCapacity) {
+      const excludeId = newParentId === location.parentId ? id : undefined;
+      await this.validateCapacityAgainstParent(newParentId, newCapacity, excludeId);
+    }
+
+    // Update level and path if parentId changes
+    let needUpdatePath = false;
+    if (dto.parentId !== undefined && dto.parentId !== location.parentId) {
+      needUpdatePath = true;
+      if (dto.parentId) {
+        const parent = await this.findById(dto.parentId);
+        location.level = parent.level + 1;
+        location.path = generatePath(parent.path, location.id);
+      } else {
+        location.level = 1;
+        location.path = generatePath(null, location.id);
       }
     }
 
     Object.assign(location, dto);
-    return this.repository.save(location);
+    const saved = await this.repository.save(location);
+
+    // If parent changed, also need to update children's paths recursively
+    if (needUpdatePath) {
+      await this.updateChildrenPaths(saved);
+    }
+
+    return saved;
+  }
+
+  // Helper: Recursively update children paths when parent path changes
+  private async updateChildrenPaths(parent: StorageLocation): Promise<void> {
+    const children = await this.repository.find({ where: { parentId: parent.id } });
+    for (const child of children) {
+      child.level = parent.level + 1;
+      child.path = generatePath(parent.path, child.id);
+      await this.repository.save(child);
+      await this.updateChildrenPaths(child);
+    }
   }
 
   async remove(id: string): Promise<void> {
