@@ -215,10 +215,13 @@ export class StorageLocationsService {
   }
 
   async update(id: string, dto: UpdateStorageLocationDto): Promise<StorageLocation> {
+    console.log('Update DTO received:', JSON.stringify(dto, null, 2));
     const location = await this.findById(id);
+    console.log('Current location:', { id: location.id, parentId: location.parentId, type: location.type });
     const currentType = location.type;
     const newType = dto.type || currentType;
     const newParentId = dto.parentId !== undefined ? dto.parentId : location.parentId;
+    console.log('New parentId will be:', newParentId);
 
     // Check duplicate code if code is being changed
     if (dto.code && dto.code !== location.code) {

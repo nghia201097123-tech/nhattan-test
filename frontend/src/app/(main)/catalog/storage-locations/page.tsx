@@ -146,8 +146,12 @@ export default function StorageLocationsPage() {
         // Clear parentId for CABINET type
         parentId: values.type === 'CABINET' ? null : values.parentId,
       };
+      console.log('Form values:', values);
+      console.log('Payload to send:', payload);
+      console.log('Editing item:', editingItem);
       if (editingItem) {
-        await storageLocationsService.update(editingItem.id, payload);
+        const result = await storageLocationsService.update(editingItem.id, payload);
+        console.log('Update result:', result);
         message.success('Cập nhật thành công');
       } else {
         await storageLocationsService.create(payload);
@@ -158,6 +162,7 @@ export default function StorageLocationsPage() {
       setEditingItem(null);
       fetchLocations();
     } catch (error: any) {
+      console.error('Error:', error);
       message.error(error.response?.data?.message || 'Có lỗi xảy ra');
     }
   };
@@ -327,23 +332,29 @@ export default function StorageLocationsPage() {
               </Select.Option>
             </Select>
           </Form.Item>
-          <Form.Item noStyle shouldUpdate={(prev, cur) => prev.type !== cur.type}>
-            {({ getFieldValue }) => {
-              const type = getFieldValue('type');
+          <Form.Item
+            noStyle
+            dependencies={['type']}
+          >
+            {() => {
+              const type = form.getFieldValue('type');
               const options = getParentOptions(type);
               const parentLabel = type === 'SHELF' ? 'Thuộc Tủ' : 'Thuộc Kệ';
-              return type && type !== 'CABINET' ? (
+              const isVisible = type && type !== 'CABINET';
+
+              return (
                 <Form.Item
                   name="parentId"
                   label={parentLabel}
-                  rules={[{ required: true, message: `Vui lòng chọn ${type === 'SHELF' ? 'Tủ' : 'Kệ'}` }]}
+                  rules={[{ required: isVisible, message: `Vui lòng chọn ${type === 'SHELF' ? 'Tủ' : 'Kệ'}` }]}
+                  hidden={!isVisible}
                 >
                   <Select
-                    options={options.map((o) => ({ label: o.name, value: o.id }))}
+                    options={options.map((o: any) => ({ label: o.name, value: o.id }))}
                     placeholder={`Chọn ${type === 'SHELF' ? 'Tủ' : 'Kệ'}`}
                   />
                 </Form.Item>
-              ) : null;
+              );
             }}
           </Form.Item>
           <Form.Item
