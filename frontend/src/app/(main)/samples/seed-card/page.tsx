@@ -435,7 +435,7 @@ export default function SeedCardPage() {
         title="Xem trước thẻ giống"
         open={previewVisible}
         onCancel={() => setPreviewVisible(false)}
-        width={600}
+        width={700}
         centered
         footer={[
           <Button key="close" onClick={() => setPreviewVisible(false)}>
@@ -451,8 +451,86 @@ export default function SeedCardPage() {
           </Button>,
         ]}
       >
-        <div style={{ maxHeight: '70vh', overflow: 'auto', display: 'flex', justifyContent: 'center' }}>
-          <PrintableCards cards={previewData} config={config} />
+        <div style={{ padding: '16px' }}>
+          {previewData.map((card) => (
+            <div
+              key={card.id}
+              style={{
+                width: '100%',
+                border: '2px solid #000',
+                borderRadius: '8px',
+                padding: '24px',
+                backgroundColor: '#fff',
+                marginBottom: previewData.length > 1 ? '16px' : 0,
+              }}
+            >
+              {/* Tiêu đề */}
+              <div style={{
+                textAlign: 'center',
+                fontWeight: 'bold',
+                fontSize: '24px',
+                marginBottom: '20px',
+                borderBottom: '2px solid #333',
+                paddingBottom: '12px'
+              }}>
+                {config.cardTitle}
+              </div>
+
+              {/* Nội dung: Thông tin bên trái, QR bên phải */}
+              <div style={{ display: 'flex', gap: '24px' }}>
+                {/* Thông tin bên trái */}
+                <div style={{
+                  flex: 1,
+                  fontSize: '16px',
+                  lineHeight: '2',
+                }}>
+                  {config.showCode && (
+                    <div><strong>Mã:</strong> {card.code}</div>
+                  )}
+                  {config.showVarietyName && (
+                    <div><strong>Giống:</strong> {card.varietyName}</div>
+                  )}
+                  {config.showCategory && (
+                    <div><strong>Loại:</strong> {card.categoryName}</div>
+                  )}
+                  {config.showScientificName && card.scientificName && (
+                    <div><strong>Tên KH:</strong> <em>{card.scientificName}</em></div>
+                  )}
+                  {config.showCollectionDate && (
+                    <div><strong>Thu thập:</strong> {dayjs(card.collectionDate).format('DD/MM/YYYY')}</div>
+                  )}
+                  {config.showLocation && card.location && (
+                    <div><strong>Địa điểm:</strong> {card.location}</div>
+                  )}
+                  {config.showProvider && card.providerName && (
+                    <div><strong>Nguồn:</strong> {card.providerName}</div>
+                  )}
+                  {config.showGerminationRate && card.germinationRate !== undefined && (
+                    <div><strong>Nảy mầm:</strong> {card.germinationRate}%</div>
+                  )}
+                  {config.showExpiryDate && card.expiryDate && (
+                    <div><strong>Hết hạn:</strong> {dayjs(card.expiryDate).format('DD/MM/YYYY')}</div>
+                  )}
+                  {config.showStorageLocation && card.storageLocation && (
+                    <div><strong>Vị trí:</strong> {card.storageLocation}</div>
+                  )}
+                </div>
+
+                {/* QR Code bên phải */}
+                {config.showQRCode && (
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderLeft: '2px dashed #ccc',
+                    paddingLeft: '24px',
+                  }}>
+                    <QRCodeSVG value={card.qrCodeData} size={160} />
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
         </div>
       </Modal>
 
