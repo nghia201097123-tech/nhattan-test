@@ -61,55 +61,80 @@ const SeedCard = ({ data, config }: { data: SeedCardData; config: SeedCardConfig
         width: `${config.cardWidth}mm`,
         height: `${config.cardHeight}mm`,
         border: '1px solid #000',
-        padding: '3mm',
+        padding: '4mm',
         fontFamily: 'Arial, sans-serif',
-        fontSize: '8pt',
+        fontSize: '9pt',
         display: 'flex',
         flexDirection: 'column',
         pageBreakInside: 'avoid',
         backgroundColor: '#fff',
+        boxSizing: 'border-box',
       }}
     >
-      <div style={{ textAlign: 'center', fontWeight: 'bold', fontSize: '10pt', marginBottom: '2mm' }}>
+      {/* Tiêu đề */}
+      <div style={{
+        textAlign: 'center',
+        fontWeight: 'bold',
+        fontSize: '11pt',
+        marginBottom: '3mm',
+        borderBottom: '1px solid #ccc',
+        paddingBottom: '2mm'
+      }}>
         {config.cardTitle}
       </div>
 
-      <div style={{ display: 'flex', flex: 1 }}>
-        <div style={{ flex: 1 }}>
+      {/* Nội dung: Thông tin bên trái, QR bên phải */}
+      <div style={{ display: 'flex', flex: 1, gap: '3mm' }}>
+        {/* Thông tin bên trái */}
+        <div style={{
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+          lineHeight: '1.5',
+          paddingRight: '2mm',
+        }}>
           {config.showCode && (
-            <div><strong>Mã:</strong> {data.code}</div>
+            <div style={{ marginBottom: '1mm' }}><strong>Mã:</strong> {data.code}</div>
           )}
           {config.showVarietyName && (
-            <div><strong>Giống:</strong> {data.varietyName}</div>
+            <div style={{ marginBottom: '1mm' }}><strong>Giống:</strong> {data.varietyName}</div>
           )}
           {config.showCategory && (
-            <div><strong>Loại:</strong> {data.categoryName}</div>
+            <div style={{ marginBottom: '1mm' }}><strong>Loại:</strong> {data.categoryName}</div>
           )}
           {config.showScientificName && data.scientificName && (
-            <div><strong>Tên KH:</strong> <em>{data.scientificName}</em></div>
+            <div style={{ marginBottom: '1mm' }}><strong>Tên KH:</strong> <em>{data.scientificName}</em></div>
           )}
           {config.showCollectionDate && (
-            <div><strong>Thu thập:</strong> {dayjs(data.collectionDate).format('DD/MM/YYYY')}</div>
+            <div style={{ marginBottom: '1mm' }}><strong>Thu thập:</strong> {dayjs(data.collectionDate).format('DD/MM/YYYY')}</div>
           )}
           {config.showLocation && data.location && (
-            <div><strong>Địa điểm:</strong> {data.location}</div>
+            <div style={{ marginBottom: '1mm' }}><strong>Địa điểm:</strong> {data.location}</div>
           )}
           {config.showProvider && data.providerName && (
-            <div><strong>Nguồn:</strong> {data.providerName}</div>
+            <div style={{ marginBottom: '1mm' }}><strong>Nguồn:</strong> {data.providerName}</div>
           )}
           {config.showGerminationRate && data.germinationRate !== undefined && (
-            <div><strong>Nảy mầm:</strong> {data.germinationRate}%</div>
+            <div style={{ marginBottom: '1mm' }}><strong>Nảy mầm:</strong> {data.germinationRate}%</div>
           )}
           {config.showExpiryDate && data.expiryDate && (
-            <div><strong>Hết hạn:</strong> {dayjs(data.expiryDate).format('DD/MM/YYYY')}</div>
+            <div style={{ marginBottom: '1mm' }}><strong>Hết hạn:</strong> {dayjs(data.expiryDate).format('DD/MM/YYYY')}</div>
           )}
           {config.showStorageLocation && data.storageLocation && (
-            <div><strong>Vị trí:</strong> {data.storageLocation}</div>
+            <div style={{ marginBottom: '1mm' }}><strong>Vị trí:</strong> {data.storageLocation}</div>
           )}
         </div>
 
+        {/* QR Code bên phải */}
         {config.showQRCode && (
-          <div style={{ marginLeft: '2mm', display: 'flex', alignItems: 'center' }}>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            borderLeft: '1px dashed #ccc',
+            paddingLeft: '3mm',
+          }}>
             <QRCodeSVG value={data.qrCodeData} size={config.qrCodeSize} />
           </div>
         )}
