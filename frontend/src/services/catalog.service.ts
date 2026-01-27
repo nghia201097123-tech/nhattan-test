@@ -45,12 +45,20 @@ export const seedCategoriesService = {
 
 // Seed Varieties
 export const seedVarietiesService = {
-  async getAll(params?: PaginationParams): Promise<PaginatedResult<SeedVariety>> {
+  async getAll(params?: PaginationParams & { categoryId?: string }): Promise<PaginatedResult<SeedVariety>> {
     const response = await api.get<PaginatedResult<SeedVariety>>(
       '/catalog/seed-varieties',
       { params }
     );
     return response.data;
+  },
+
+  async getByCategory(categoryId: string): Promise<SeedVariety[]> {
+    const response = await api.get<PaginatedResult<SeedVariety>>(
+      '/catalog/seed-varieties',
+      { params: { categoryId, page: 1, limit: 1000 } }
+    );
+    return response.data?.data || [];
   },
 
   async getById(id: string): Promise<SeedVariety> {

@@ -23,6 +23,7 @@ import {
   Upload,
   Divider,
   TreeSelect,
+  Spin,
 } from 'antd';
 import type { UploadFile } from 'antd';
 import {
@@ -99,6 +100,15 @@ export default function SampleCollectionPage() {
   const [staffList, setStaffList] = useState<Staff[]>([]);
   const [fileList, setFileList] = useState<UploadFile[]>([]);
 
+  // Loading states
+  const [loadingCategories, setLoadingCategories] = useState(false);
+  const [loadingVarieties, setLoadingVarieties] = useState(false);
+  const [loadingProviders, setLoadingProviders] = useState(false);
+  const [loadingStaff, setLoadingStaff] = useState(false);
+
+  // Selected category for filtering varieties
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | undefined>();
+
   const fetchData = async () => {
     setLoading(true);
     try {
@@ -116,34 +126,73 @@ export default function SampleCollectionPage() {
     }
   };
 
-  const loadDropdownData = async () => {
+  // Load categories
+  const loadCategories = async () => {
+    setLoadingCategories(true);
     try {
-      // Load categories (tree structure)
-      const categoriesRes = await seedCategoriesService.getTree();
-      console.log('Categories response:', categoriesRes);
-      setCategories(Array.isArray(categoriesRes) ? categoriesRes : []);
-
-      // Load varieties
-      const varietiesRes = await seedVarietiesService.getAll({ page: 1, limit: 1000 });
-      console.log('Varieties response:', varietiesRes);
-      const varietiesData = varietiesRes?.data || varietiesRes;
-      setVarieties(Array.isArray(varietiesData) ? varietiesData : []);
-
-      // Load providers
-      const providersRes = await sampleProvidersService.getAll({ page: 1, limit: 1000 });
-      console.log('Providers response:', providersRes);
-      const providersData = providersRes?.data || providersRes;
-      setProviders(Array.isArray(providersData) ? providersData : []);
-
-      // Load staff
-      const staffRes = await staffService.getAll({ page: 1, limit: 1000 });
-      console.log('Staff response:', staffRes);
-      const staffData = staffRes?.data || staffRes;
-      setStaffList(Array.isArray(staffData) ? staffData : []);
-
+      const res = await seedCategoriesService.getTree();
+      console.log('Categories response:', res);
+      setCategories(Array.isArray(res) ? res : []);
     } catch (error) {
-      console.error('Error loading dropdown data:', error);
-      message.error('Không thể tải dữ liệu danh mục');
+      console.error('Error loading categories:', error);
+    } finally {
+      setLoadingCategories(false);
+    }
+  };
+
+  // Load varieties - filter by categoryId if provided
+  const loadVarieties = async (categoryId?: string) => {
+    setLoadingVarieties(true);
+    try {
+      if (categoryId) {
+        // Load varieties filtered by category
+        const res = await seedVarietiesService.getByCategory(categoryId);
+        console.log('Varieties by category response:', res);
+        setVarieties(Array.isArray(res) ? res : []);
+      } else {
+        // Load all varieties
+        const res = await seedVarietiesService.getAll({ page: 1, limit: 1000 });
+        console.log('All varieties response:', res);
+        const data = res?.data || res;
+        setVarieties(Array.isArray(data) ? data : []);
+      }
+    } catch (error) {
+      console.error('Error loading varieties:', error);
+      setVarieties([]);
+    } finally {
+      setLoadingVarieties(false);
+    }
+  };
+
+  // Load providers
+  const loadProviders = async () => {
+    setLoadingProviders(true);
+    try {
+      const res = await sampleProvidersService.getAll({ page: 1, limit: 1000 });
+      console.log('Providers response:', res);
+      const data = res?.data || res;
+      setProviders(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error('Error loading providers:', error);
+      setProviders([]);
+    } finally {
+      setLoadingProviders(false);
+    }
+  };
+
+  // Load staff
+  const loadStaff = async () => {
+    setLoadingStaff(true);
+    try {
+      const res = await staffService.getAll({ page: 1, limit: 1000 });
+      console.log('Staff response:', res);
+      const data = res?.data || res;
+      setStaffList(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error('Error loading staff:', error);
+      setStaffList([]);
+    } finally {
+      setLoadingStaff(false);
     }
   };
 
@@ -151,24 +200,45 @@ export default function SampleCollectionPage() {
     fetchData();
   }, [page, limit, search]);
 
+  // Load dropdown data on mount
   useEffect(() => {
-    loadDropdownData();
+    loadCategories();
+    loadVarieties();
+    loadProviders();
+    loadStaff();
   }, []);
+
+  // Reload varieties when category changes
+  useEffect(() => {
+    if (selectedCategoryId) {
+      loadVarieties(selectedCategoryId);
+      // Reset varietyId when category changes
+      form.setFieldValue('varietyId', undefined);
+    }
+  }, [selectedCategoryId]);
 
   const handleCreate = () => {
     form.resetFields();
     setSelectedRecord(null);
     setFileList([]);
+    setSelectedCategoryId(undefined);
     setIsModalOpen(true);
+    // Reset varieties to all when opening create form
+    loadVarieties();
   };
 
   const handleEdit = (record: Sample) => {
     setSelectedRecord(record);
+    setSelectedCategoryId(record.categoryId);
     form.setFieldsValue({
       ...record,
       collectionDate: record.collectionDate ? dayjs(record.collectionDate) : undefined,
     });
     setIsModalOpen(true);
+    // Load varieties for this category
+    if (record.categoryId) {
+      loadVarieties(record.categoryId);
+    }
   };
 
   const handleView = (record: Sample) => {
@@ -218,6 +288,11 @@ export default function SampleCollectionPage() {
     } catch (error) {
       message.error('Thao tác thất bại');
     }
+  };
+
+  // Handle category change - filter varieties
+  const handleCategoryChange = (value: string) => {
+    setSelectedCategoryId(value);
   };
 
   // Convert categories to tree data for TreeSelect
@@ -357,22 +432,26 @@ export default function SampleCollectionPage() {
                   showSearch
                   treeDefaultExpandAll
                   allowClear
+                  loading={loadingCategories}
+                  onChange={handleCategoryChange}
                   filterTreeNode={(input, option) =>
                     (option?.title as string)?.toLowerCase().includes(input.toLowerCase())
                   }
-                  notFoundContent={categories.length === 0 ? "Không có dữ liệu" : "Không tìm thấy"}
+                  notFoundContent={loadingCategories ? <Spin size="small" /> : "Không có dữ liệu"}
                 />
               </Form.Item>
             </Col>
             <Col span={12}>
               <Form.Item name="varietyId" label="Giống">
                 <Select
-                  placeholder="Chọn giống"
+                  placeholder={selectedCategoryId ? "Chọn giống" : "Vui lòng chọn Nhóm giống trước"}
                   showSearch
                   allowClear
+                  loading={loadingVarieties}
+                  disabled={!selectedCategoryId}
                   optionFilterProp="label"
                   options={varieties.map(v => ({ value: v.id, label: v.name }))}
-                  notFoundContent={varieties.length === 0 ? "Không có dữ liệu" : "Không tìm thấy"}
+                  notFoundContent={loadingVarieties ? <Spin size="small" /> : "Không có dữ liệu"}
                 />
               </Form.Item>
             </Col>
@@ -422,9 +501,10 @@ export default function SampleCollectionPage() {
                   placeholder="Chọn nguồn cung cấp"
                   showSearch
                   allowClear
+                  loading={loadingProviders}
                   optionFilterProp="label"
                   options={providers.map(p => ({ value: p.id, label: p.name }))}
-                  notFoundContent={providers.length === 0 ? "Không có dữ liệu" : "Không tìm thấy"}
+                  notFoundContent={loadingProviders ? <Spin size="small" /> : "Không có dữ liệu"}
                 />
               </Form.Item>
             </Col>
@@ -439,9 +519,10 @@ export default function SampleCollectionPage() {
                   placeholder="Chọn người thu thập"
                   showSearch
                   allowClear
+                  loading={loadingStaff}
                   optionFilterProp="label"
                   options={staffList.map(s => ({ value: s.id, label: s.fullName }))}
-                  notFoundContent={staffList.length === 0 ? "Không có dữ liệu" : "Không tìm thấy"}
+                  notFoundContent={loadingStaff ? <Spin size="small" /> : "Không có dữ liệu"}
                 />
               </Form.Item>
             </Col>
