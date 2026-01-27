@@ -1,4 +1,4 @@
-import { IsOptional, IsUUID, IsEnum, IsDateString } from 'class-validator';
+import { IsOptional, IsString, IsEnum, IsDateString } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { PaginationDto } from '../../../../common/dto/pagination.dto';
 import { SampleStatus } from '../../../../shared/constants/sample-status.constant';
@@ -6,7 +6,7 @@ import { SampleStatus } from '../../../../shared/constants/sample-status.constan
 export class SampleFilterDto extends PaginationDto {
   @ApiPropertyOptional()
   @IsOptional()
-  @IsUUID()
+  @IsString()
   categoryId?: string;
 
   @ApiPropertyOptional({ enum: SampleStatus })
@@ -16,7 +16,7 @@ export class SampleFilterDto extends PaginationDto {
 
   @ApiPropertyOptional()
   @IsOptional()
-  @IsUUID()
+  @IsString()
   warehouseId?: string;
 
   @ApiPropertyOptional()
