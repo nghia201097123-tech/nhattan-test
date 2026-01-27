@@ -72,8 +72,8 @@ export default function SampleEvaluationPage() {
   const loadDropdownData = async () => {
     try {
       const [samplesRes, staffRes, stagesRes] = await Promise.all([
-        samplesService.getAll({ limit: 1000 }),
-        staffService.getAll({ limit: 1000 }),
+        samplesService.getAll({ page: 1, limit: 500 }),
+        staffService.getAll({ page: 1, limit: 500 }),
         evaluationCriteriaService.getStages(),
       ]);
       setSamples(samplesRes.data || []);

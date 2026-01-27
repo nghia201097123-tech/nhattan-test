@@ -79,8 +79,8 @@ export default function PropagationPage() {
   const loadDropdownData = async () => {
     try {
       const [samplesRes, staffRes] = await Promise.all([
-        samplesService.getAll({ limit: 1000 }),
-        staffService.getAll({ limit: 1000 }),
+        samplesService.getAll({ page: 1, limit: 500 }),
+        staffService.getAll({ page: 1, limit: 500 }),
       ]);
       setSamples(samplesRes.data || []);
       setStaffList(staffRes.data || []);

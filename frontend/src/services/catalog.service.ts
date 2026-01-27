@@ -56,7 +56,7 @@ export const seedVarietiesService = {
   async getByCategory(categoryId: string): Promise<SeedVariety[]> {
     const response = await api.get<PaginatedResult<SeedVariety>>(
       '/catalog/seed-varieties',
-      { params: { categoryId, page: 1, limit: 1000 } }
+      { params: { categoryId, page: 1, limit: 500 } }
     );
     return response.data?.data || [];
   },

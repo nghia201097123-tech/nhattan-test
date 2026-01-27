@@ -151,7 +151,7 @@ export default function SampleCollectionPage() {
         setVarieties(Array.isArray(res) ? res : []);
       } else {
         // Load all varieties
-        const res = await seedVarietiesService.getAll({ page: 1, limit: 1000 });
+        const res = await seedVarietiesService.getAll({ page: 1, limit: 500 });
         console.log('All varieties response:', res);
         const data = res?.data || res;
         setVarieties(Array.isArray(data) ? data : []);
@@ -168,7 +168,7 @@ export default function SampleCollectionPage() {
   const loadProviders = async () => {
     setLoadingProviders(true);
     try {
-      const res = await sampleProvidersService.getAll({ page: 1, limit: 1000 });
+      const res = await sampleProvidersService.getAll({ page: 1, limit: 500 });
       console.log('Providers response:', res);
       const data = res?.data || res;
       setProviders(Array.isArray(data) ? data : []);
@@ -184,7 +184,7 @@ export default function SampleCollectionPage() {
   const loadStaff = async () => {
     setLoadingStaff(true);
     try {
-      const res = await staffService.getAll({ page: 1, limit: 1000 });
+      const res = await staffService.getAll({ page: 1, limit: 500 });
       console.log('Staff response:', res);
       const data = res?.data || res;
       setStaffList(Array.isArray(data) ? data : []);
