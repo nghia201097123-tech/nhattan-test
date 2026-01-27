@@ -47,10 +47,10 @@ const defaultConfig: SeedCardConfig = {
   showExpiryDate: true,
   showStorageLocation: false,
   showQRCode: true,
-  qrCodeSize: 80,
+  qrCodeSize: 150,
   cardTitle: 'THẺ GIỐNG',
-  cardWidth: 85,
-  cardHeight: 54,
+  cardWidth: 180,
+  cardHeight: 100,
 };
 
 // Component thẻ giống để in
@@ -60,69 +60,70 @@ const SeedCard = ({ data, config }: { data: SeedCardData; config: SeedCardConfig
       style={{
         width: `${config.cardWidth}mm`,
         height: `${config.cardHeight}mm`,
-        border: '1px solid #000',
-        padding: '4mm',
+        border: '2px solid #000',
+        padding: '6mm',
         fontFamily: 'Arial, sans-serif',
-        fontSize: '9pt',
+        fontSize: '12pt',
         display: 'flex',
         flexDirection: 'column',
         pageBreakInside: 'avoid',
         backgroundColor: '#fff',
         boxSizing: 'border-box',
+        borderRadius: '4px',
       }}
     >
       {/* Tiêu đề */}
       <div style={{
         textAlign: 'center',
         fontWeight: 'bold',
-        fontSize: '11pt',
-        marginBottom: '3mm',
-        borderBottom: '1px solid #ccc',
-        paddingBottom: '2mm'
+        fontSize: '16pt',
+        marginBottom: '5mm',
+        borderBottom: '2px solid #333',
+        paddingBottom: '3mm'
       }}>
         {config.cardTitle}
       </div>
 
       {/* Nội dung: Thông tin bên trái, QR bên phải */}
-      <div style={{ display: 'flex', flex: 1, gap: '3mm' }}>
+      <div style={{ display: 'flex', flex: 1, gap: '5mm' }}>
         {/* Thông tin bên trái */}
         <div style={{
           flex: 1,
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'center',
-          lineHeight: '1.5',
-          paddingRight: '2mm',
+          lineHeight: '1.8',
+          paddingRight: '4mm',
         }}>
           {config.showCode && (
-            <div style={{ marginBottom: '1mm' }}><strong>Mã:</strong> {data.code}</div>
+            <div style={{ marginBottom: '2mm', fontSize: '13pt' }}><strong>Mã:</strong> {data.code}</div>
           )}
           {config.showVarietyName && (
-            <div style={{ marginBottom: '1mm' }}><strong>Giống:</strong> {data.varietyName}</div>
+            <div style={{ marginBottom: '2mm', fontSize: '13pt' }}><strong>Giống:</strong> {data.varietyName}</div>
           )}
           {config.showCategory && (
-            <div style={{ marginBottom: '1mm' }}><strong>Loại:</strong> {data.categoryName}</div>
+            <div style={{ marginBottom: '2mm', fontSize: '13pt' }}><strong>Loại:</strong> {data.categoryName}</div>
           )}
           {config.showScientificName && data.scientificName && (
-            <div style={{ marginBottom: '1mm' }}><strong>Tên KH:</strong> <em>{data.scientificName}</em></div>
+            <div style={{ marginBottom: '2mm', fontSize: '13pt' }}><strong>Tên KH:</strong> <em>{data.scientificName}</em></div>
           )}
           {config.showCollectionDate && (
-            <div style={{ marginBottom: '1mm' }}><strong>Thu thập:</strong> {dayjs(data.collectionDate).format('DD/MM/YYYY')}</div>
+            <div style={{ marginBottom: '2mm', fontSize: '13pt' }}><strong>Thu thập:</strong> {dayjs(data.collectionDate).format('DD/MM/YYYY')}</div>
           )}
           {config.showLocation && data.location && (
-            <div style={{ marginBottom: '1mm' }}><strong>Địa điểm:</strong> {data.location}</div>
+            <div style={{ marginBottom: '2mm', fontSize: '13pt' }}><strong>Địa điểm:</strong> {data.location}</div>
           )}
           {config.showProvider && data.providerName && (
-            <div style={{ marginBottom: '1mm' }}><strong>Nguồn:</strong> {data.providerName}</div>
+            <div style={{ marginBottom: '2mm', fontSize: '13pt' }}><strong>Nguồn:</strong> {data.providerName}</div>
           )}
           {config.showGerminationRate && data.germinationRate !== undefined && (
-            <div style={{ marginBottom: '1mm' }}><strong>Nảy mầm:</strong> {data.germinationRate}%</div>
+            <div style={{ marginBottom: '2mm', fontSize: '13pt' }}><strong>Nảy mầm:</strong> {data.germinationRate}%</div>
           )}
           {config.showExpiryDate && data.expiryDate && (
-            <div style={{ marginBottom: '1mm' }}><strong>Hết hạn:</strong> {dayjs(data.expiryDate).format('DD/MM/YYYY')}</div>
+            <div style={{ marginBottom: '2mm', fontSize: '13pt' }}><strong>Hết hạn:</strong> {dayjs(data.expiryDate).format('DD/MM/YYYY')}</div>
           )}
           {config.showStorageLocation && data.storageLocation && (
-            <div style={{ marginBottom: '1mm' }}><strong>Vị trí:</strong> {data.storageLocation}</div>
+            <div style={{ marginBottom: '2mm', fontSize: '13pt' }}><strong>Vị trí:</strong> {data.storageLocation}</div>
           )}
         </div>
 
@@ -132,8 +133,9 @@ const SeedCard = ({ data, config }: { data: SeedCardData; config: SeedCardConfig
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            borderLeft: '1px dashed #ccc',
-            paddingLeft: '3mm',
+            borderLeft: '2px dashed #999',
+            paddingLeft: '5mm',
+            minWidth: `${config.qrCodeSize + 20}px`,
           }}>
             <QRCodeSVG value={data.qrCodeData} size={config.qrCodeSize} />
           </div>
@@ -429,7 +431,8 @@ export default function SeedCardPage() {
         title="Xem trước thẻ giống"
         open={previewVisible}
         onCancel={() => setPreviewVisible(false)}
-        width={800}
+        width="90%"
+        style={{ maxWidth: 900 }}
         footer={[
           <Button key="close" onClick={() => setPreviewVisible(false)}>
             Đóng
