@@ -22,6 +22,17 @@ export enum PropagationStatus {
   CANCELLED = 'CANCELLED',       // Đã hủy
 }
 
+export enum PropagationMethod {
+  SEED = 'SEED',                     // Nhân giống bằng hạt
+  CUTTING = 'CUTTING',               // Giâm cành
+  GRAFTING = 'GRAFTING',             // Ghép
+  LAYERING = 'LAYERING',             // Chiết cành
+  DIVISION = 'DIVISION',             // Tách bụi/củ
+  TISSUE_CULTURE = 'TISSUE_CULTURE', // Nuôi cấy mô
+  HYDROPONIC = 'HYDROPONIC',         // Thủy canh
+  OTHER = 'OTHER',                   // Phương pháp khác
+}
+
 @Entity('propagation_batches')
 @Index(['code'])
 @Index(['status'])
@@ -80,8 +91,8 @@ export class PropagationBatch {
   propagationLocation: string;
 
   // Phương pháp nhân giống
-  @Column({ name: 'propagation_method', length: 100, nullable: true })
-  propagationMethod: string;
+  @Column({ name: 'propagation_method', type: 'enum', enum: PropagationMethod, nullable: true })
+  propagationMethod: PropagationMethod;
 
   // Điều kiện môi trường
   @Column({ name: 'environment_conditions', type: 'text', nullable: true })

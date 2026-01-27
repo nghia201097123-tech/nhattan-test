@@ -11,7 +11,7 @@ import {
   MaxLength,
   IsEnum,
 } from 'class-validator';
-import { PropagationStatus } from '../entities/propagation-batch.entity';
+import { PropagationStatus, PropagationMethod } from '../entities/propagation-batch.entity';
 
 export class CreatePropagationDto {
   @ApiPropertyOptional()
@@ -58,11 +58,10 @@ export class CreatePropagationDto {
   @MaxLength(500)
   propagationLocation?: string;
 
-  @ApiPropertyOptional({ description: 'Phương pháp nhân giống' })
+  @ApiPropertyOptional({ description: 'Phương pháp nhân giống', enum: PropagationMethod })
   @IsOptional()
-  @IsString()
-  @MaxLength(100)
-  propagationMethod?: string;
+  @IsEnum(PropagationMethod)
+  propagationMethod?: PropagationMethod;
 
   @ApiPropertyOptional({ description: 'Điều kiện môi trường' })
   @IsOptional()

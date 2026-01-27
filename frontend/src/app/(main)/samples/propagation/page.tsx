@@ -54,6 +54,18 @@ const statusLabels: Record<PropagationStatus, string> = {
   CANCELLED: 'Đã hủy',
 };
 
+// Phương pháp nhân giống
+const propagationMethods = [
+  { value: 'SEED', label: 'Nhân giống bằng hạt' },
+  { value: 'CUTTING', label: 'Giâm cành' },
+  { value: 'GRAFTING', label: 'Ghép' },
+  { value: 'LAYERING', label: 'Chiết cành' },
+  { value: 'DIVISION', label: 'Tách bụi/củ' },
+  { value: 'TISSUE_CULTURE', label: 'Nuôi cấy mô' },
+  { value: 'HYDROPONIC', label: 'Thủy canh' },
+  { value: 'OTHER', label: 'Phương pháp khác' },
+];
+
 export default function PropagationPage() {
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<PropagationBatch[]>([]);
@@ -445,7 +457,11 @@ export default function PropagationPage() {
             <Input placeholder="Nhập vị trí" />
           </Form.Item>
           <Form.Item name="propagationMethod" label="Phương pháp nhân giống">
-            <Input placeholder="Nhập phương pháp" />
+            <Select
+              placeholder="Chọn phương pháp"
+              allowClear
+              options={propagationMethods}
+            />
           </Form.Item>
           <Form.Item name="notes" label="Ghi chú">
             <TextArea rows={3} placeholder="Ghi chú..." />
@@ -582,7 +598,7 @@ export default function PropagationPage() {
               {selectedRecord.propagationLocation || '-'}
             </Descriptions.Item>
             <Descriptions.Item label="Phương pháp">
-              {selectedRecord.propagationMethod || '-'}
+              {propagationMethods.find(m => m.value === selectedRecord.propagationMethod)?.label || selectedRecord.propagationMethod || '-'}
             </Descriptions.Item>
             <Descriptions.Item label="Tiến độ">
               <Progress percent={selectedRecord.progress} />
