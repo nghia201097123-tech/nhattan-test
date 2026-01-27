@@ -6,16 +6,19 @@ import { PropagationStatus } from '../entities/propagation-batch.entity';
 export class PropagationFilterDto {
   @ApiPropertyOptional()
   @IsOptional()
+  @Type(() => String)
   @IsString()
   search?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
+  @Type(() => String)
   @IsString()
   sampleId?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
+  @Type(() => String)
   @IsString()
   propagatorId?: string;
 
@@ -26,11 +29,13 @@ export class PropagationFilterDto {
 
   @ApiPropertyOptional()
   @IsOptional()
+  @Type(() => String)
   @IsDateString()
   startDateFrom?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
+  @Type(() => String)
   @IsDateString()
   startDateTo?: string;
 
@@ -46,11 +51,13 @@ export class PropagationFilterDto {
 
   @ApiPropertyOptional()
   @IsOptional()
+  @Type(() => String)
   @IsString()
   sortBy?: string = 'createdAt';
 
   @ApiPropertyOptional()
   @IsOptional()
+  @Type(() => String)
   @IsString()
   sortOrder?: 'ASC' | 'DESC' = 'DESC';
 }

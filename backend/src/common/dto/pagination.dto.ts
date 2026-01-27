@@ -20,6 +20,7 @@ export class PaginationDto {
 
   @ApiPropertyOptional({ default: 'createdAt' })
   @IsOptional()
+  @Type(() => String)
   @IsString()
   sortBy?: string = 'createdAt';
 
@@ -30,6 +31,7 @@ export class PaginationDto {
 
   @ApiPropertyOptional()
   @IsOptional()
+  @Type(() => String)
   @IsString()
   search?: string;
 }
