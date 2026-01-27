@@ -19,7 +19,8 @@ export class SampleProvidersService {
     const skip = (page - 1) * limit;
 
     const queryBuilder = this.repository
-      .createQueryBuilder('provider');
+      .createQueryBuilder('provider')
+      .where('provider.isActive = :isActive', { isActive: true });
 
     if (type) {
       queryBuilder.andWhere('provider.type = :type', { type });

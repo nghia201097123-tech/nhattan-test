@@ -185,6 +185,11 @@ export const staffService = {
     return response.data;
   },
 
+  async getByRole(role: string): Promise<Staff[]> {
+    const response = await api.get<Staff[]>(`/catalog/staff/by-role/${role}`);
+    return response.data;
+  },
+
   async getById(id: string): Promise<Staff> {
     const response = await api.get<Staff>(`/catalog/staff/${id}`);
     return response.data;

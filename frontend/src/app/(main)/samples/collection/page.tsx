@@ -180,10 +180,11 @@ export default function SampleCollectionPage() {
     }
   };
 
-  // Load staff
+  // Load staff - only active staff
   const loadStaff = async () => {
     setLoadingStaff(true);
     try {
+      // Backend now filters isActive=true automatically
       const res = await staffService.getAll({ page: 1, limit: 500 });
       console.log('Staff response:', res);
       const data = res?.data || res;
