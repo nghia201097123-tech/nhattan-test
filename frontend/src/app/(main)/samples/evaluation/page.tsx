@@ -156,16 +156,20 @@ export default function SampleEvaluationPage() {
       };
 
       if (selectedRecord) {
-        await evaluationsService.update(selectedRecord.id, payload);
+        // Remove fields not allowed in update DTO
+        const { sampleId, stageId, ...updatePayload } = payload;
+        await evaluationsService.update(selectedRecord.id, updatePayload);
         message.success('Cập nhật thành công');
       } else {
         await evaluationsService.create(payload);
         message.success('Tạo mới thành công');
       }
       setIsModalOpen(false);
+      form.resetFields();
       fetchData();
-    } catch (error) {
-      message.error('Thao tác thất bại');
+    } catch (error: any) {
+      console.error('Submit error:', error);
+      message.error(error.response?.data?.message || 'Thao tác thất bại');
     }
   };
 
@@ -399,8 +403,8 @@ export default function SampleEvaluationPage() {
                 label: 'Thông tin chung',
                 children: (
                   <Descriptions column={1} bordered size="small">
-                    <Descriptions.Item label="Mã mẫu">{selectedRecord.sample?.sampleCode || '-'}</Descriptions.Item>
-                    <Descriptions.Item label="Tên mẫu">{selectedRecord.sample?.sampleName || '-'}</Descriptions.Item>
+                    <Descriptions.Item label="Mã mẫu">{selectedRecord.sample?.code || '-'}</Descriptions.Item>
+                    <Descriptions.Item label="Tên mẫu">{selectedRecord.sample?.varietyName || selectedRecord.sample?.localName || '-'}</Descriptions.Item>
                     <Descriptions.Item label="Ngày đánh giá">
                       {selectedRecord.evaluationDate ? dayjs(selectedRecord.evaluationDate).format('DD/MM/YYYY') : '-'}
                     </Descriptions.Item>
