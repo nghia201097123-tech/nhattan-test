@@ -108,12 +108,12 @@ export default function SampleCollectionPage() {
   const loadDropdownData = async () => {
     try {
       const [categoriesRes, varietiesRes, providersRes, warehousesRes] = await Promise.all([
-        seedCategoriesService.getAll(),
+        seedCategoriesService.getTree(),
         seedVarietiesService.getAll({ limit: 1000 }),
         sampleProvidersService.getAll({ limit: 1000 }),
         warehousesService.getAll({ limit: 1000 }),
       ]);
-      setCategories(categoriesRes);
+      setCategories(categoriesRes || []);
       setVarieties(varietiesRes.data || []);
       setProviders(providersRes.data || []);
       setWarehouses(warehousesRes.data || []);

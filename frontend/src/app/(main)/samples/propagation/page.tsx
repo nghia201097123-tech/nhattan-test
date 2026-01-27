@@ -30,8 +30,9 @@ import {
   CloseOutlined,
   FieldTimeOutlined,
 } from '@ant-design/icons';
-import { propagationService } from '@/services/samples.service';
-import { PropagationBatch, PropagationStatus } from '@/types';
+import { propagationService, samplesService } from '@/services/samples.service';
+import { staffService } from '@/services/catalog.service';
+import { PropagationBatch, PropagationStatus, Sample, Staff } from '@/types';
 import dayjs from 'dayjs';
 
 const { Title, Text } = Typography;
@@ -71,6 +72,23 @@ export default function PropagationPage() {
   const [harvestForm] = Form.useForm();
   const [progressForm] = Form.useForm();
 
+  // Dropdown data
+  const [samples, setSamples] = useState<Sample[]>([]);
+  const [staffList, setStaffList] = useState<Staff[]>([]);
+
+  const loadDropdownData = async () => {
+    try {
+      const [samplesRes, staffRes] = await Promise.all([
+        samplesService.getAll({ limit: 1000 }),
+        staffService.getAll({ limit: 1000 }),
+      ]);
+      setSamples(samplesRes.data || []);
+      setStaffList(staffRes.data || []);
+    } catch (error) {
+      console.error('Error loading dropdown data:', error);
+    }
+  };
+
   const fetchData = async () => {
     setLoading(true);
     try {
@@ -91,6 +109,7 @@ export default function PropagationPage() {
 
   useEffect(() => {
     fetchData();
+    loadDropdownData();
   }, [page, limit, search, statusFilter]);
 
   const handleCreate = () => {
@@ -369,10 +388,36 @@ export default function PropagationPage() {
             <Input placeholder="Nhập tên đợt nhân" />
           </Form.Item>
           <Form.Item name="sampleId" label="Mẫu gốc" rules={[{ required: true, message: 'Vui lòng chọn mẫu gốc' }]}>
-            <Input placeholder="ID mẫu gốc" />
+            <Select
+              placeholder="Chọn mẫu gốc"
+              showSearch
+              allowClear
+              optionFilterProp="children"
+              filterOption={(input, option) =>
+                (option?.children as unknown as string)?.toLowerCase().includes(input.toLowerCase())
+              }
+            >
+              {samples.map(s => (
+                <Select.Option key={s.id} value={s.id}>
+                  {s.sampleCode} - {s.sampleName}
+                </Select.Option>
+              ))}
+            </Select>
           </Form.Item>
           <Form.Item name="propagatorId" label="Người phụ trách">
-            <Input placeholder="ID người phụ trách" />
+            <Select
+              placeholder="Chọn người phụ trách"
+              showSearch
+              allowClear
+              optionFilterProp="children"
+              filterOption={(input, option) =>
+                (option?.children as unknown as string)?.toLowerCase().includes(input.toLowerCase())
+              }
+            >
+              {staffList.map(s => (
+                <Select.Option key={s.id} value={s.id}>{s.fullName}</Select.Option>
+              ))}
+            </Select>
           </Form.Item>
           <div style={{ display: 'flex', gap: 16 }}>
             <Form.Item name="startDate" label="Ngày bắt đầu" style={{ flex: 1 }} rules={[{ required: true }]}>

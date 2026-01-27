@@ -32,8 +32,9 @@ import {
   UploadOutlined,
   HistoryOutlined,
 } from '@ant-design/icons';
-import { evaluationsService } from '@/services/samples.service';
-import { SampleEvaluation } from '@/types';
+import { evaluationsService, samplesService } from '@/services/samples.service';
+import { staffService, evaluationCriteriaService } from '@/services/catalog.service';
+import { SampleEvaluation, Sample, Staff } from '@/types';
 import dayjs from 'dayjs';
 
 const { Title, Text } = Typography;
@@ -63,6 +64,26 @@ export default function SampleEvaluationPage() {
   const [selectedRecord, setSelectedRecord] = useState<SampleEvaluation | null>(null);
   const [form] = Form.useForm();
 
+  // Dropdown data
+  const [samples, setSamples] = useState<Sample[]>([]);
+  const [staffList, setStaffList] = useState<Staff[]>([]);
+  const [stages, setStages] = useState<any[]>([]);
+
+  const loadDropdownData = async () => {
+    try {
+      const [samplesRes, staffRes, stagesRes] = await Promise.all([
+        samplesService.getAll({ limit: 1000 }),
+        staffService.getAll({ limit: 1000 }),
+        evaluationCriteriaService.getStages(),
+      ]);
+      setSamples(samplesRes.data || []);
+      setStaffList(staffRes.data || []);
+      setStages(stagesRes || []);
+    } catch (error) {
+      console.error('Error loading dropdown data:', error);
+    }
+  };
+
   const fetchData = async () => {
     setLoading(true);
     try {
@@ -82,6 +103,7 @@ export default function SampleEvaluationPage() {
 
   useEffect(() => {
     fetchData();
+    loadDropdownData();
   }, [page, limit, search]);
 
   const handleCreate = () => {
@@ -257,7 +279,21 @@ export default function SampleEvaluationPage() {
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item name="sampleId" label="Mẫu giống" rules={[{ required: true, message: 'Vui lòng chọn mẫu' }]}>
-                <Select placeholder="Chọn mẫu giống" />
+                <Select
+                  placeholder="Chọn mẫu giống"
+                  showSearch
+                  allowClear
+                  optionFilterProp="children"
+                  filterOption={(input, option) =>
+                    (option?.children as unknown as string)?.toLowerCase().includes(input.toLowerCase())
+                  }
+                >
+                  {samples.map(s => (
+                    <Select.Option key={s.id} value={s.id}>
+                      {s.sampleCode} - {s.sampleName}
+                    </Select.Option>
+                  ))}
+                </Select>
               </Form.Item>
             </Col>
             <Col span={12}>
@@ -270,12 +306,33 @@ export default function SampleEvaluationPage() {
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item name="evaluatorId" label="Người đánh giá">
-                <Select placeholder="Chọn người đánh giá" />
+                <Select
+                  placeholder="Chọn người đánh giá"
+                  showSearch
+                  allowClear
+                  optionFilterProp="children"
+                  filterOption={(input, option) =>
+                    (option?.children as unknown as string)?.toLowerCase().includes(input.toLowerCase())
+                  }
+                >
+                  {staffList.map(s => (
+                    <Select.Option key={s.id} value={s.id}>{s.fullName}</Select.Option>
+                  ))}
+                </Select>
               </Form.Item>
             </Col>
             <Col span={12}>
               <Form.Item name="stageId" label="Giai đoạn đánh giá">
-                <Select placeholder="Chọn giai đoạn" />
+                <Select
+                  placeholder="Chọn giai đoạn"
+                  showSearch
+                  allowClear
+                  optionFilterProp="children"
+                >
+                  {stages.map(stage => (
+                    <Select.Option key={stage.id} value={stage.id}>{stage.name}</Select.Option>
+                  ))}
+                </Select>
               </Form.Item>
             </Col>
           </Row>
