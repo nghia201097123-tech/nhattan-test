@@ -401,7 +401,7 @@ export default function PropagationPage() {
             >
               {samples.map(s => (
                 <Select.Option key={s.id} value={s.id}>
-                  {s.sampleCode} - {s.sampleName}
+                  {s.code} - {s.varietyName || s.localName || 'Chưa đặt tên'}
                 </Select.Option>
               ))}
             </Select>
