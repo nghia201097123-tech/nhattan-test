@@ -39,9 +39,9 @@ import {
   seedCategoriesService,
   seedVarietiesService,
   sampleProvidersService,
-  staffService,
 } from '@/services/catalog.service';
-import { Sample, SampleStatus, SeedCategory, SeedVariety, SampleProvider, Staff } from '@/types';
+import { usersService } from '@/services/users.service';
+import { Sample, SampleStatus, SeedCategory, SeedVariety, SampleProvider, User } from '@/types';
 import dayjs from 'dayjs';
 
 const { Title } = Typography;
@@ -97,7 +97,7 @@ export default function SampleCollectionPage() {
   const [categories, setCategories] = useState<SeedCategory[]>([]);
   const [varieties, setVarieties] = useState<SeedVariety[]>([]);
   const [providers, setProviders] = useState<SampleProvider[]>([]);
-  const [staffList, setStaffList] = useState<Staff[]>([]);
+  const [staffList, setStaffList] = useState<User[]>([]);
   const [fileList, setFileList] = useState<UploadFile[]>([]);
 
   // Loading states
@@ -180,17 +180,19 @@ export default function SampleCollectionPage() {
     }
   };
 
-  // Load staff - only active staff
+  // Load staff/users - only active users (employees)
   const loadStaff = async () => {
     setLoadingStaff(true);
     try {
-      // Backend now filters isActive=true automatically
-      const res = await staffService.getAll({ page: 1, limit: 500 });
-      console.log('Staff response:', res);
-      const data = res?.data || res;
-      setStaffList(Array.isArray(data) ? data : []);
+      // Use usersService to get employees from users table
+      const res = await usersService.getAll({ page: 1, limit: 500 });
+      console.log('Users/Staff response:', res);
+      // Filter only active users
+      const data = res?.data || [];
+      const activeUsers = Array.isArray(data) ? data.filter((u: User) => u.isActive) : [];
+      setStaffList(activeUsers);
     } catch (error) {
-      console.error('Error loading staff:', error);
+      console.error('Error loading users:', error);
       setStaffList([]);
     } finally {
       setLoadingStaff(false);

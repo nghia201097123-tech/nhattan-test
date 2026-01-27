@@ -33,8 +33,9 @@ import {
   HistoryOutlined,
 } from '@ant-design/icons';
 import { evaluationsService, samplesService } from '@/services/samples.service';
-import { staffService, evaluationCriteriaService } from '@/services/catalog.service';
-import { SampleEvaluation, Sample, Staff } from '@/types';
+import { evaluationCriteriaService } from '@/services/catalog.service';
+import { usersService } from '@/services/users.service';
+import { SampleEvaluation, Sample, User } from '@/types';
 import dayjs from 'dayjs';
 
 const { Title, Text } = Typography;
@@ -66,18 +67,20 @@ export default function SampleEvaluationPage() {
 
   // Dropdown data
   const [samples, setSamples] = useState<Sample[]>([]);
-  const [staffList, setStaffList] = useState<Staff[]>([]);
+  const [staffList, setStaffList] = useState<User[]>([]);
   const [stages, setStages] = useState<any[]>([]);
 
   const loadDropdownData = async () => {
     try {
-      const [samplesRes, staffRes, stagesRes] = await Promise.all([
+      const [samplesRes, usersRes, stagesRes] = await Promise.all([
         samplesService.getAll({ page: 1, limit: 500 }),
-        staffService.getAll({ page: 1, limit: 500 }),
+        usersService.getAll({ page: 1, limit: 500 }),
         evaluationCriteriaService.getStages(),
       ]);
       setSamples(samplesRes.data || []);
-      setStaffList(staffRes.data || []);
+      // Filter only active users
+      const activeUsers = (usersRes.data || []).filter((u: User) => u.isActive);
+      setStaffList(activeUsers);
       setStages(stagesRes || []);
     } catch (error) {
       console.error('Error loading dropdown data:', error);

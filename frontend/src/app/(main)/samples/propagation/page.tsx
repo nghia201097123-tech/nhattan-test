@@ -31,8 +31,8 @@ import {
   FieldTimeOutlined,
 } from '@ant-design/icons';
 import { propagationService, samplesService } from '@/services/samples.service';
-import { staffService } from '@/services/catalog.service';
-import { PropagationBatch, PropagationStatus, Sample, Staff } from '@/types';
+import { usersService } from '@/services/users.service';
+import { PropagationBatch, PropagationStatus, Sample, User } from '@/types';
 import dayjs from 'dayjs';
 
 const { Title, Text } = Typography;
@@ -74,16 +74,18 @@ export default function PropagationPage() {
 
   // Dropdown data
   const [samples, setSamples] = useState<Sample[]>([]);
-  const [staffList, setStaffList] = useState<Staff[]>([]);
+  const [staffList, setStaffList] = useState<User[]>([]);
 
   const loadDropdownData = async () => {
     try {
-      const [samplesRes, staffRes] = await Promise.all([
+      const [samplesRes, usersRes] = await Promise.all([
         samplesService.getAll({ page: 1, limit: 500 }),
-        staffService.getAll({ page: 1, limit: 500 }),
+        usersService.getAll({ page: 1, limit: 500 }),
       ]);
       setSamples(samplesRes.data || []);
-      setStaffList(staffRes.data || []);
+      // Filter only active users
+      const activeUsers = (usersRes.data || []).filter((u: User) => u.isActive);
+      setStaffList(activeUsers);
     } catch (error) {
       console.error('Error loading dropdown data:', error);
     }
