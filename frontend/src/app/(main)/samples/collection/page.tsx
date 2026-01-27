@@ -31,7 +31,6 @@ import {
   EditOutlined,
   DeleteOutlined,
   EyeOutlined,
-  UploadOutlined,
   InboxOutlined,
 } from '@ant-design/icons';
 import { samplesService } from '@/services/samples.service';
@@ -119,25 +118,42 @@ export default function SampleCollectionPage() {
 
   const loadDropdownData = async () => {
     try {
-      const [categoriesRes, varietiesRes, providersRes, staffRes] = await Promise.all([
-        seedCategoriesService.getTree(),
-        seedVarietiesService.getAll({ limit: 1000 }),
-        sampleProvidersService.getAll({ limit: 1000 }),
-        staffService.getAll({ limit: 1000 }),
-      ]);
-      setCategories(categoriesRes || []);
-      setVarieties(varietiesRes.data || []);
-      setProviders(providersRes.data || []);
-      setStaffList(staffRes.data || []);
+      // Load categories (tree structure)
+      const categoriesRes = await seedCategoriesService.getTree();
+      console.log('Categories response:', categoriesRes);
+      setCategories(Array.isArray(categoriesRes) ? categoriesRes : []);
+
+      // Load varieties
+      const varietiesRes = await seedVarietiesService.getAll({ page: 1, limit: 1000 });
+      console.log('Varieties response:', varietiesRes);
+      const varietiesData = varietiesRes?.data || varietiesRes;
+      setVarieties(Array.isArray(varietiesData) ? varietiesData : []);
+
+      // Load providers
+      const providersRes = await sampleProvidersService.getAll({ page: 1, limit: 1000 });
+      console.log('Providers response:', providersRes);
+      const providersData = providersRes?.data || providersRes;
+      setProviders(Array.isArray(providersData) ? providersData : []);
+
+      // Load staff
+      const staffRes = await staffService.getAll({ page: 1, limit: 1000 });
+      console.log('Staff response:', staffRes);
+      const staffData = staffRes?.data || staffRes;
+      setStaffList(Array.isArray(staffData) ? staffData : []);
+
     } catch (error) {
       console.error('Error loading dropdown data:', error);
+      message.error('Không thể tải dữ liệu danh mục');
     }
   };
 
   useEffect(() => {
     fetchData();
-    loadDropdownData();
   }, [page, limit, search]);
+
+  useEffect(() => {
+    loadDropdownData();
+  }, []);
 
   const handleCreate = () => {
     form.resetFields();
@@ -206,10 +222,11 @@ export default function SampleCollectionPage() {
 
   // Convert categories to tree data for TreeSelect
   const buildCategoryTree = (items: SeedCategory[]): any[] => {
+    if (!items || !Array.isArray(items)) return [];
     return items.map(item => ({
       value: item.id,
       title: item.name,
-      children: item.children ? buildCategoryTree(item.children) : [],
+      children: item.children && item.children.length > 0 ? buildCategoryTree(item.children) : undefined,
     }));
   };
 
@@ -221,7 +238,7 @@ export default function SampleCollectionPage() {
       width: 130,
     },
     {
-      title: 'Tên giống',
+      title: 'Tên mẫu giống',
       dataIndex: 'varietyName',
       key: 'varietyName',
       ellipsis: true,
@@ -248,7 +265,7 @@ export default function SampleCollectionPage() {
       dataIndex: 'initialQuantity',
       key: 'initialQuantity',
       width: 120,
-      render: (val: number, record: Sample) => val ? `${val} ${record.quantityUnit || 'gram'}` : '-',
+      render: (val: number, record: Sample) => val ? `${val} ${(record as any).quantityUnit || 'gram'}` : '-',
     },
     {
       title: 'Trạng thái',
@@ -343,6 +360,7 @@ export default function SampleCollectionPage() {
                   filterTreeNode={(input, option) =>
                     (option?.title as string)?.toLowerCase().includes(input.toLowerCase())
                   }
+                  notFoundContent={categories.length === 0 ? "Không có dữ liệu" : "Không tìm thấy"}
                 />
               </Form.Item>
             </Col>
@@ -352,23 +370,18 @@ export default function SampleCollectionPage() {
                   placeholder="Chọn giống"
                   showSearch
                   allowClear
-                  optionFilterProp="children"
-                  filterOption={(input, option) =>
-                    (option?.children as unknown as string)?.toLowerCase().includes(input.toLowerCase())
-                  }
-                >
-                  {varieties.map(v => (
-                    <Select.Option key={v.id} value={v.id}>{v.name}</Select.Option>
-                  ))}
-                </Select>
+                  optionFilterProp="label"
+                  options={varieties.map(v => ({ value: v.id, label: v.name }))}
+                  notFoundContent={varieties.length === 0 ? "Không có dữ liệu" : "Không tìm thấy"}
+                />
               </Form.Item>
             </Col>
           </Row>
 
           <Row gutter={16}>
             <Col span={8}>
-              <Form.Item name="varietyName" label="Tên giống">
-                <Input placeholder="Nhập tên giống" />
+              <Form.Item name="varietyName" label="Tên mẫu giống">
+                <Input placeholder="Nhập tên mẫu giống" />
               </Form.Item>
             </Col>
             <Col span={8}>
@@ -409,15 +422,10 @@ export default function SampleCollectionPage() {
                   placeholder="Chọn nguồn cung cấp"
                   showSearch
                   allowClear
-                  optionFilterProp="children"
-                  filterOption={(input, option) =>
-                    (option?.children as unknown as string)?.toLowerCase().includes(input.toLowerCase())
-                  }
-                >
-                  {providers.map(p => (
-                    <Select.Option key={p.id} value={p.id}>{p.name}</Select.Option>
-                  ))}
-                </Select>
+                  optionFilterProp="label"
+                  options={providers.map(p => ({ value: p.id, label: p.name }))}
+                  notFoundContent={providers.length === 0 ? "Không có dữ liệu" : "Không tìm thấy"}
+                />
               </Form.Item>
             </Col>
             <Col span={8}>
@@ -431,15 +439,10 @@ export default function SampleCollectionPage() {
                   placeholder="Chọn người thu thập"
                   showSearch
                   allowClear
-                  optionFilterProp="children"
-                  filterOption={(input, option) =>
-                    (option?.children as unknown as string)?.toLowerCase().includes(input.toLowerCase())
-                  }
-                >
-                  {staffList.map(s => (
-                    <Select.Option key={s.id} value={s.id}>{s.fullName}</Select.Option>
-                  ))}
-                </Select>
+                  optionFilterProp="label"
+                  options={staffList.map(s => ({ value: s.id, label: s.fullName }))}
+                  notFoundContent={staffList.length === 0 ? "Không có dữ liệu" : "Không tìm thấy"}
+                />
               </Form.Item>
             </Col>
           </Row>
@@ -519,26 +522,26 @@ export default function SampleCollectionPage() {
         {selectedRecord && (
           <>
             <Descriptions column={1} bordered size="small">
-              <Descriptions.Item label="Mã mẫu">{selectedRecord.code || '-'}</Descriptions.Item>
+              <Descriptions.Item label="Mã mẫu">{(selectedRecord as any).code || '-'}</Descriptions.Item>
               <Descriptions.Item label="Nhóm giống">{selectedRecord.category?.name || '-'}</Descriptions.Item>
               <Descriptions.Item label="Giống">{selectedRecord.variety?.name || '-'}</Descriptions.Item>
-              <Descriptions.Item label="Tên giống">{selectedRecord.varietyName || '-'}</Descriptions.Item>
-              <Descriptions.Item label="Tên địa phương">{selectedRecord.localName || '-'}</Descriptions.Item>
-              <Descriptions.Item label="Tên khoa học">{selectedRecord.scientificName || '-'}</Descriptions.Item>
+              <Descriptions.Item label="Tên mẫu giống">{(selectedRecord as any).varietyName || '-'}</Descriptions.Item>
+              <Descriptions.Item label="Tên địa phương">{(selectedRecord as any).localName || '-'}</Descriptions.Item>
+              <Descriptions.Item label="Tên khoa học">{(selectedRecord as any).scientificName || '-'}</Descriptions.Item>
               <Descriptions.Item label="Ngày thu thập">
                 {selectedRecord.collectionDate ? dayjs(selectedRecord.collectionDate).format('DD/MM/YYYY') : '-'}
               </Descriptions.Item>
-              <Descriptions.Item label="Năm thu thập">{selectedRecord.collectionYear || '-'}</Descriptions.Item>
-              <Descriptions.Item label="Mùa vụ">{selectedRecord.season || '-'}</Descriptions.Item>
-              <Descriptions.Item label="Nguồn cung cấp">{selectedRecord.provider?.name || selectedRecord.providerName || '-'}</Descriptions.Item>
-              <Descriptions.Item label="Người thu thập">{selectedRecord.collector?.fullName || '-'}</Descriptions.Item>
-              <Descriptions.Item label="Số lượng ban đầu">{selectedRecord.initialQuantity} {selectedRecord.quantityUnit}</Descriptions.Item>
-              <Descriptions.Item label="Số lượng hiện tại">{selectedRecord.currentQuantity} {selectedRecord.quantityUnit}</Descriptions.Item>
-              <Descriptions.Item label="Tình trạng mẫu">{selectedRecord.sampleCondition || '-'}</Descriptions.Item>
+              <Descriptions.Item label="Năm thu thập">{(selectedRecord as any).collectionYear || '-'}</Descriptions.Item>
+              <Descriptions.Item label="Mùa vụ">{(selectedRecord as any).season || '-'}</Descriptions.Item>
+              <Descriptions.Item label="Nguồn cung cấp">{selectedRecord.provider?.name || (selectedRecord as any).providerName || '-'}</Descriptions.Item>
+              <Descriptions.Item label="Người thu thập">{(selectedRecord as any).collector?.fullName || '-'}</Descriptions.Item>
+              <Descriptions.Item label="Số lượng ban đầu">{(selectedRecord as any).initialQuantity} {(selectedRecord as any).quantityUnit}</Descriptions.Item>
+              <Descriptions.Item label="Số lượng hiện tại">{(selectedRecord as any).currentQuantity} {(selectedRecord as any).quantityUnit}</Descriptions.Item>
+              <Descriptions.Item label="Tình trạng mẫu">{(selectedRecord as any).sampleCondition || '-'}</Descriptions.Item>
               <Descriptions.Item label="Trạng thái">
                 <Tag color={statusColors[selectedRecord.status]}>{statusLabels[selectedRecord.status]}</Tag>
               </Descriptions.Item>
-              <Descriptions.Item label="Ghi chú">{selectedRecord.notes || '-'}</Descriptions.Item>
+              <Descriptions.Item label="Ghi chú">{(selectedRecord as any).notes || '-'}</Descriptions.Item>
             </Descriptions>
 
             <Divider>Ảnh đính kèm</Divider>
