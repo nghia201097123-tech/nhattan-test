@@ -39,10 +39,9 @@ import {
   seedCategoriesService,
   seedVarietiesService,
   sampleProvidersService,
-  warehousesService,
-  storageLocationsService,
+  staffService,
 } from '@/services/catalog.service';
-import { Sample, SampleStatus, SeedCategory, SeedVariety, SampleProvider, Warehouse, StorageLocation } from '@/types';
+import { Sample, SampleStatus, SeedCategory, SeedVariety, SampleProvider, Staff } from '@/types';
 import dayjs from 'dayjs';
 
 const { Title } = Typography;
@@ -67,6 +66,21 @@ const statusLabels: Record<SampleStatus, string> = {
   DESTROYED: 'Đã huỷ',
 };
 
+const seasonOptions = [
+  { value: 'Xuân', label: 'Xuân' },
+  { value: 'Hè', label: 'Hè' },
+  { value: 'Thu', label: 'Thu' },
+  { value: 'Đông', label: 'Đông' },
+  { value: 'Xuân-Hè', label: 'Xuân-Hè' },
+  { value: 'Thu-Đông', label: 'Thu-Đông' },
+];
+
+const conditionOptions = [
+  { value: 'good', label: 'Tốt' },
+  { value: 'medium', label: 'Trung bình' },
+  { value: 'poor', label: 'Kém' },
+];
+
 export default function SampleCollectionPage() {
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<Sample[]>([]);
@@ -83,9 +97,7 @@ export default function SampleCollectionPage() {
   const [categories, setCategories] = useState<SeedCategory[]>([]);
   const [varieties, setVarieties] = useState<SeedVariety[]>([]);
   const [providers, setProviders] = useState<SampleProvider[]>([]);
-  const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
-  const [storageLocations, setStorageLocations] = useState<StorageLocation[]>([]);
-  const [selectedWarehouseId, setSelectedWarehouseId] = useState<string | undefined>();
+  const [staffList, setStaffList] = useState<Staff[]>([]);
   const [fileList, setFileList] = useState<UploadFile[]>([]);
 
   const fetchData = async () => {
@@ -107,16 +119,16 @@ export default function SampleCollectionPage() {
 
   const loadDropdownData = async () => {
     try {
-      const [categoriesRes, varietiesRes, providersRes, warehousesRes] = await Promise.all([
+      const [categoriesRes, varietiesRes, providersRes, staffRes] = await Promise.all([
         seedCategoriesService.getTree(),
         seedVarietiesService.getAll({ limit: 1000 }),
         sampleProvidersService.getAll({ limit: 1000 }),
-        warehousesService.getAll({ limit: 1000 }),
+        staffService.getAll({ limit: 1000 }),
       ]);
       setCategories(categoriesRes || []);
       setVarieties(varietiesRes.data || []);
       setProviders(providersRes.data || []);
-      setWarehouses(warehousesRes.data || []);
+      setStaffList(staffRes.data || []);
     } catch (error) {
       console.error('Error loading dropdown data:', error);
     }
@@ -127,28 +139,15 @@ export default function SampleCollectionPage() {
     loadDropdownData();
   }, [page, limit, search]);
 
-  // Load storage locations when warehouse changes
-  useEffect(() => {
-    if (selectedWarehouseId) {
-      storageLocationsService.getByWarehouse(selectedWarehouseId)
-        .then(res => setStorageLocations(res || []))
-        .catch(err => console.error(err));
-    } else {
-      setStorageLocations([]);
-    }
-  }, [selectedWarehouseId]);
-
   const handleCreate = () => {
     form.resetFields();
     setSelectedRecord(null);
     setFileList([]);
-    setSelectedWarehouseId(undefined);
     setIsModalOpen(true);
   };
 
   const handleEdit = (record: Sample) => {
     setSelectedRecord(record);
-    setSelectedWarehouseId(record.warehouseId);
     form.setFieldsValue({
       ...record,
       collectionDate: record.collectionDate ? dayjs(record.collectionDate) : undefined,
@@ -182,9 +181,13 @@ export default function SampleCollectionPage() {
 
   const handleSubmit = async (values: any) => {
     try {
+      const collectionDate = values.collectionDate?.format('YYYY-MM-DD');
+      const collectionYear = values.collectionDate ? values.collectionDate.year() : undefined;
+
       const payload = {
         ...values,
-        collectionDate: values.collectionDate?.format('YYYY-MM-DD'),
+        collectionDate,
+        collectionYear,
       };
 
       if (selectedRecord) {
@@ -201,11 +204,6 @@ export default function SampleCollectionPage() {
     }
   };
 
-  const handleWarehouseChange = (value: string) => {
-    setSelectedWarehouseId(value);
-    form.setFieldValue('storageLocationId', undefined);
-  };
-
   // Convert categories to tree data for TreeSelect
   const buildCategoryTree = (items: SeedCategory[]): any[] => {
     return items.map(item => ({
@@ -218,14 +216,14 @@ export default function SampleCollectionPage() {
   const columns = [
     {
       title: 'Mã mẫu',
-      dataIndex: 'sampleCode',
-      key: 'sampleCode',
+      dataIndex: 'code',
+      key: 'code',
       width: 130,
     },
     {
-      title: 'Tên mẫu',
-      dataIndex: 'sampleName',
-      key: 'sampleName',
+      title: 'Tên giống',
+      dataIndex: 'varietyName',
+      key: 'varietyName',
       ellipsis: true,
     },
     {
@@ -247,10 +245,10 @@ export default function SampleCollectionPage() {
     },
     {
       title: 'Số lượng',
-      dataIndex: 'quantity',
-      key: 'quantity',
-      width: 100,
-      render: (val: number, record: Sample) => `${val} ${record.unit}`,
+      dataIndex: 'initialQuantity',
+      key: 'initialQuantity',
+      width: 120,
+      render: (val: number, record: Sample) => val ? `${val} ${record.quantityUnit || 'gram'}` : '-',
     },
     {
       title: 'Trạng thái',
@@ -330,12 +328,10 @@ export default function SampleCollectionPage() {
         width={900}
       >
         <Form form={form} layout="vertical" onFinish={handleSubmit}>
+          {/* THÔNG TIN GIỐNG */}
+          <Divider orientation="left">Thông tin giống</Divider>
+
           <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item name="sampleName" label="Tên mẫu" rules={[{ required: true, message: 'Vui lòng nhập tên mẫu' }]}>
-                <Input placeholder="Nhập tên mẫu" />
-              </Form.Item>
-            </Col>
             <Col span={12}>
               <Form.Item name="categoryId" label="Nhóm giống" rules={[{ required: true, message: 'Vui lòng chọn nhóm giống' }]}>
                 <TreeSelect
@@ -350,9 +346,6 @@ export default function SampleCollectionPage() {
                 />
               </Form.Item>
             </Col>
-          </Row>
-
-          <Row gutter={16}>
             <Col span={12}>
               <Form.Item name="varietyId" label="Giống">
                 <Select
@@ -370,32 +363,50 @@ export default function SampleCollectionPage() {
                 </Select>
               </Form.Item>
             </Col>
+          </Row>
+
+          <Row gutter={16}>
+            <Col span={8}>
+              <Form.Item name="varietyName" label="Tên giống">
+                <Input placeholder="Nhập tên giống" />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item name="localName" label="Tên địa phương">
+                <Input placeholder="Nhập tên địa phương" />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item name="scientificName" label="Tên khoa học">
+                <Input placeholder="Nhập tên khoa học" />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          {/* THÔNG TIN THU THẬP */}
+          <Divider orientation="left">Thông tin thu thập</Divider>
+
+          <Row gutter={16}>
             <Col span={12}>
               <Form.Item name="collectionDate" label="Ngày thu thập" rules={[{ required: true, message: 'Vui lòng chọn ngày thu thập' }]}>
                 <DatePicker style={{ width: '100%' }} format="DD/MM/YYYY" placeholder="Chọn ngày" />
               </Form.Item>
             </Col>
+            <Col span={12}>
+              <Form.Item name="season" label="Mùa vụ">
+                <Select placeholder="Chọn mùa vụ" allowClear options={seasonOptions} />
+              </Form.Item>
+            </Col>
           </Row>
+
+          {/* NGUỒN CUNG CẤP & NGƯỜI THU THẬP */}
+          <Divider orientation="left">Nguồn cung cấp & Người thu thập</Divider>
 
           <Row gutter={16}>
             <Col span={8}>
-              <Form.Item name="quantity" label="Số lượng" rules={[{ required: true, message: 'Vui lòng nhập số lượng' }]}>
-                <InputNumber style={{ width: '100%' }} min={0} placeholder="Nhập số lượng" />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item name="unit" label="Đơn vị" initialValue="gram">
-                <Select>
-                  <Select.Option value="gram">Gram</Select.Option>
-                  <Select.Option value="kg">Kilogram</Select.Option>
-                  <Select.Option value="hat">Hạt</Select.Option>
-                </Select>
-              </Form.Item>
-            </Col>
-            <Col span={8}>
               <Form.Item name="providerId" label="Nguồn cung cấp">
                 <Select
-                  placeholder="Chọn nguồn"
+                  placeholder="Chọn nguồn cung cấp"
                   showSearch
                   allowClear
                   optionFilterProp="children"
@@ -409,56 +420,64 @@ export default function SampleCollectionPage() {
                 </Select>
               </Form.Item>
             </Col>
+            <Col span={8}>
+              <Form.Item name="providerName" label="Tên nguồn cung cấp (khác)">
+                <Input placeholder="Nhập tên nguồn nếu không có trong danh sách" />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item name="collectorId" label="Người thu thập">
+                <Select
+                  placeholder="Chọn người thu thập"
+                  showSearch
+                  allowClear
+                  optionFilterProp="children"
+                  filterOption={(input, option) =>
+                    (option?.children as unknown as string)?.toLowerCase().includes(input.toLowerCase())
+                  }
+                >
+                  {staffList.map(s => (
+                    <Select.Option key={s.id} value={s.id}>{s.fullName}</Select.Option>
+                  ))}
+                </Select>
+              </Form.Item>
+            </Col>
           </Row>
 
-          <Form.Item name="collectionLocation" label="Địa điểm thu thập">
-            <Input placeholder="Nhập địa điểm thu thập" />
-          </Form.Item>
-
-          <Divider>Vị trí lưu trữ</Divider>
+          {/* THÔNG TIN MẪU */}
+          <Divider orientation="left">Thông tin mẫu</Divider>
 
           <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item name="warehouseId" label="Kho lưu trữ">
-                <Select
-                  placeholder="Chọn kho"
-                  showSearch
-                  allowClear
-                  optionFilterProp="children"
-                  onChange={handleWarehouseChange}
-                  filterOption={(input, option) =>
-                    (option?.children as unknown as string)?.toLowerCase().includes(input.toLowerCase())
-                  }
-                >
-                  {warehouses.map(w => (
-                    <Select.Option key={w.id} value={w.id}>{w.name}</Select.Option>
-                  ))}
+            <Col span={6}>
+              <Form.Item name="initialQuantity" label="Số lượng ban đầu" rules={[{ required: true, message: 'Vui lòng nhập số lượng' }]}>
+                <InputNumber style={{ width: '100%' }} min={0} placeholder="Nhập số lượng" />
+              </Form.Item>
+            </Col>
+            <Col span={6}>
+              <Form.Item name="currentQuantity" label="Số lượng hiện tại">
+                <InputNumber style={{ width: '100%' }} min={0} placeholder="Nhập số lượng" />
+              </Form.Item>
+            </Col>
+            <Col span={6}>
+              <Form.Item name="quantityUnit" label="Đơn vị" initialValue="gram">
+                <Select>
+                  <Select.Option value="gram">Gram</Select.Option>
+                  <Select.Option value="kg">Kilogram</Select.Option>
+                  <Select.Option value="hat">Hạt</Select.Option>
                 </Select>
               </Form.Item>
             </Col>
-            <Col span={12}>
-              <Form.Item name="storageLocationId" label="Vị trí trong kho">
-                <Select
-                  placeholder="Chọn vị trí"
-                  showSearch
-                  allowClear
-                  disabled={!selectedWarehouseId}
-                  optionFilterProp="children"
-                  filterOption={(input, option) =>
-                    (option?.children as unknown as string)?.toLowerCase().includes(input.toLowerCase())
-                  }
-                >
-                  {storageLocations.map(sl => (
-                    <Select.Option key={sl.id} value={sl.id}>{sl.name}</Select.Option>
-                  ))}
-                </Select>
+            <Col span={6}>
+              <Form.Item name="sampleCondition" label="Tình trạng mẫu">
+                <Select placeholder="Chọn tình trạng" allowClear options={conditionOptions} />
               </Form.Item>
             </Col>
           </Row>
 
-          <Divider>Ảnh đính kèm</Divider>
+          {/* ẢNH ĐÍNH KÈM */}
+          <Divider orientation="left">Ảnh đính kèm</Divider>
 
-          <Form.Item name="attachments" label="">
+          <Form.Item name="attachments">
             <Dragger
               multiple
               listType="picture"
@@ -500,18 +519,22 @@ export default function SampleCollectionPage() {
         {selectedRecord && (
           <>
             <Descriptions column={1} bordered size="small">
-              <Descriptions.Item label="Mã mẫu">{selectedRecord.sampleCode}</Descriptions.Item>
-              <Descriptions.Item label="Tên mẫu">{selectedRecord.sampleName}</Descriptions.Item>
+              <Descriptions.Item label="Mã mẫu">{selectedRecord.code || '-'}</Descriptions.Item>
               <Descriptions.Item label="Nhóm giống">{selectedRecord.category?.name || '-'}</Descriptions.Item>
               <Descriptions.Item label="Giống">{selectedRecord.variety?.name || '-'}</Descriptions.Item>
+              <Descriptions.Item label="Tên giống">{selectedRecord.varietyName || '-'}</Descriptions.Item>
+              <Descriptions.Item label="Tên địa phương">{selectedRecord.localName || '-'}</Descriptions.Item>
+              <Descriptions.Item label="Tên khoa học">{selectedRecord.scientificName || '-'}</Descriptions.Item>
               <Descriptions.Item label="Ngày thu thập">
                 {selectedRecord.collectionDate ? dayjs(selectedRecord.collectionDate).format('DD/MM/YYYY') : '-'}
               </Descriptions.Item>
-              <Descriptions.Item label="Địa điểm thu thập">{selectedRecord.collectionLocation || '-'}</Descriptions.Item>
-              <Descriptions.Item label="Nguồn cung cấp">{selectedRecord.provider?.name || '-'}</Descriptions.Item>
-              <Descriptions.Item label="Số lượng">{selectedRecord.quantity} {selectedRecord.unit}</Descriptions.Item>
-              <Descriptions.Item label="Kho lưu trữ">{selectedRecord.warehouse?.name || '-'}</Descriptions.Item>
-              <Descriptions.Item label="Vị trí trong kho">{selectedRecord.storageLocation?.name || '-'}</Descriptions.Item>
+              <Descriptions.Item label="Năm thu thập">{selectedRecord.collectionYear || '-'}</Descriptions.Item>
+              <Descriptions.Item label="Mùa vụ">{selectedRecord.season || '-'}</Descriptions.Item>
+              <Descriptions.Item label="Nguồn cung cấp">{selectedRecord.provider?.name || selectedRecord.providerName || '-'}</Descriptions.Item>
+              <Descriptions.Item label="Người thu thập">{selectedRecord.collector?.fullName || '-'}</Descriptions.Item>
+              <Descriptions.Item label="Số lượng ban đầu">{selectedRecord.initialQuantity} {selectedRecord.quantityUnit}</Descriptions.Item>
+              <Descriptions.Item label="Số lượng hiện tại">{selectedRecord.currentQuantity} {selectedRecord.quantityUnit}</Descriptions.Item>
+              <Descriptions.Item label="Tình trạng mẫu">{selectedRecord.sampleCondition || '-'}</Descriptions.Item>
               <Descriptions.Item label="Trạng thái">
                 <Tag color={statusColors[selectedRecord.status]}>{statusLabels[selectedRecord.status]}</Tag>
               </Descriptions.Item>
@@ -521,14 +544,9 @@ export default function SampleCollectionPage() {
             <Divider>Ảnh đính kèm</Divider>
             <Upload
               listType="picture-card"
-              showUploadList={{ showPreviewIcon: true, showRemoveIcon: true }}
+              showUploadList={{ showPreviewIcon: true, showRemoveIcon: false }}
               beforeUpload={() => false}
-            >
-              <div>
-                <UploadOutlined />
-                <div style={{ marginTop: 8 }}>Upload</div>
-              </div>
-            </Upload>
+            />
           </>
         )}
       </Drawer>
