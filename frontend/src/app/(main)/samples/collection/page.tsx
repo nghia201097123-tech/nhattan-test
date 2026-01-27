@@ -270,8 +270,9 @@ export default function SampleCollectionPage() {
 
   const handleSubmit = async (values: any) => {
     try {
-      // Format date and remove invalid fields
+      // Format date
       const collectionDate = values.collectionDate?.format('YYYY-MM-DD');
+      const collectionYear = values.collectionDate?.year();
 
       // Remove attachments from payload (handle separately if needed)
       const { attachments, collectionDate: _, ...rest } = values;
@@ -279,6 +280,7 @@ export default function SampleCollectionPage() {
       const payload = {
         ...rest,
         collectionDate,
+        collectionYear,
       };
 
       if (selectedRecord) {

@@ -15,7 +15,6 @@ import { SeedCategory } from '../../../catalog/seed-categories/entities/seed-cat
 import { SeedVariety } from '../../../catalog/seed-varieties/entities/seed-variety.entity';
 import { Location } from '../../../catalog/locations/entities/location.entity';
 import { SampleProvider } from '../../../catalog/sample-providers/entities/sample-provider.entity';
-import { Staff } from '../../../catalog/staff/entities/staff.entity';
 import { Warehouse } from '../../../catalog/warehouses/entities/warehouse.entity';
 import { StorageLocation } from '../../../catalog/storage-locations/entities/storage-location.entity';
 import { SampleAttachment } from '../../attachments/entities/sample-attachment.entity';
@@ -102,9 +101,9 @@ export class Sample {
   @Column({ name: 'collector_id', type: 'uuid', nullable: true })
   collectorId: string;
 
-  @ManyToOne(() => Staff)
+  @ManyToOne(() => User)
   @JoinColumn({ name: 'collector_id' })
-  collector: Staff;
+  collector: User;
 
   // Thông tin mẫu
   @Column({ name: 'initial_quantity', type: 'decimal', precision: 12, scale: 2, nullable: true })
