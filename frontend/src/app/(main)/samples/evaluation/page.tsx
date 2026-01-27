@@ -325,11 +325,10 @@ export default function SampleEvaluationPage() {
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item name="stageId" label="Giai đoạn đánh giá">
+              <Form.Item name="stageId" label="Giai đoạn đánh giá" rules={[{ required: true, message: 'Vui lòng chọn giai đoạn' }]}>
                 <Select
                   placeholder="Chọn giai đoạn"
                   showSearch
-                  allowClear
                   optionFilterProp="children"
                 >
                   {stages.map(stage => (

@@ -11,7 +11,6 @@ import {
 } from 'typeorm';
 import { User } from '../../../users/entities/user.entity';
 import { Sample } from '../../collection/entities/sample.entity';
-import { Staff } from '../../../catalog/staff/entities/staff.entity';
 import { Warehouse } from '../../../catalog/warehouses/entities/warehouse.entity';
 import { StorageLocation } from '../../../catalog/storage-locations/entities/storage-location.entity';
 
@@ -49,9 +48,9 @@ export class PropagationBatch {
   @Column({ name: 'propagator_id', type: 'uuid', nullable: true })
   propagatorId: string;
 
-  @ManyToOne(() => Staff)
+  @ManyToOne(() => User)
   @JoinColumn({ name: 'propagator_id' })
-  propagator: Staff;
+  propagator: User;
 
   // Thời gian
   @Column({ name: 'start_date', type: 'date' })
