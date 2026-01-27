@@ -53,7 +53,6 @@ export default function MainLayout({ children }: MainLayoutProps) {
         { key: '/samples/evaluation', label: t.menu.sampleEvaluation || 'Đánh giá mẫu' },
         { key: '/samples/propagation', label: (t.menu as any).samplePropagation || 'Nhân mẫu' },
         { key: '/samples/seed-card', label: (t.menu as any).seedCard || 'Thẻ giống & QR' },
-        { key: '/samples/list', label: t.menu.sampleList || 'Danh sách mẫu' },
       ],
     },
     {
