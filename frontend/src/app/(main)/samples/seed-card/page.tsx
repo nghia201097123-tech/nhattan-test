@@ -148,7 +148,7 @@ export default function SeedCardPage() {
   const printRef = useRef<HTMLDivElement>(null);
 
   const handlePrint = useReactToPrint({
-    contentRef: printRef,
+    content: () => printRef.current,
     documentTitle: 'Thẻ giống',
   });
 

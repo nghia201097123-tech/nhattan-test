@@ -241,10 +241,10 @@ export default function PropagationPage() {
     },
     {
       title: 'Mẫu gốc',
-      dataIndex: ['sample', 'code'],
+      dataIndex: ['sample', 'sampleCode'],
       key: 'sample',
       render: (_: any, record: PropagationBatch) => (
-        <span>{record.sample?.code} - {record.sample?.varietyName}</span>
+        <span>{record.sample?.sampleCode} - {record.sample?.sampleName}</span>
       ),
     },
     {
@@ -517,7 +517,7 @@ export default function PropagationPage() {
             <Descriptions.Item label="Mã đợt">{selectedRecord.code}</Descriptions.Item>
             <Descriptions.Item label="Tên đợt">{selectedRecord.name || '-'}</Descriptions.Item>
             <Descriptions.Item label="Mẫu gốc">
-              {selectedRecord.sample?.code} - {selectedRecord.sample?.varietyName}
+              {selectedRecord.sample?.sampleCode} - {selectedRecord.sample?.sampleName}
             </Descriptions.Item>
             <Descriptions.Item label="Người phụ trách">
               {selectedRecord.propagator?.fullName || '-'}
