@@ -18,8 +18,7 @@ export class StaffService {
     const skip = (page - 1) * limit;
 
     const queryBuilder = this.repository
-      .createQueryBuilder('staff')
-      .where('staff.isActive = :isActive', { isActive: true });
+      .createQueryBuilder('staff');
 
     if (search) {
       queryBuilder.andWhere(
