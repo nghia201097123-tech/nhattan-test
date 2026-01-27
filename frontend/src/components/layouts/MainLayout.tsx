@@ -51,6 +51,8 @@ export default function MainLayout({ children }: MainLayoutProps) {
       children: [
         { key: '/samples/collection', label: t.menu.sampleCollection },
         { key: '/samples/evaluation', label: t.menu.sampleEvaluation },
+        { key: '/samples/propagation', label: t.menu.samplePropagation },
+        { key: '/samples/seed-card', label: t.menu.seedCard },
         { key: '/samples/list', label: t.menu.sampleList },
       ],
     },
