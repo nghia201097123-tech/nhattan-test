@@ -47,83 +47,88 @@ const defaultConfig: SeedCardConfig = {
   showExpiryDate: true,
   showStorageLocation: false,
   showQRCode: true,
-  qrCodeSize: 150,
+  qrCodeSize: 120,
   cardTitle: 'THẺ GIỐNG',
-  cardWidth: 180,
-  cardHeight: 100,
+  cardWidth: 85,
+  cardHeight: 54,
 };
 
 // Component thẻ giống để in
-const SeedCard = ({ data, config }: { data: SeedCardData; config: SeedCardConfig }) => {
+const SeedCard = ({ data, config, forPrint = false }: { data: SeedCardData; config: SeedCardConfig; forPrint?: boolean }) => {
+  // Kích thước cho preview (px) vs print (mm)
+  const scale = forPrint ? 1 : 3.78; // 1mm ≈ 3.78px
+  const unit = forPrint ? 'mm' : 'px';
+  const width = forPrint ? config.cardWidth : config.cardWidth * scale;
+  const height = forPrint ? config.cardHeight : config.cardHeight * scale;
+
   return (
     <div
       style={{
-        width: `${config.cardWidth}mm`,
-        height: `${config.cardHeight}mm`,
+        width: `${width}${unit}`,
+        minHeight: `${height}${unit}`,
         border: '2px solid #000',
-        padding: '6mm',
+        padding: forPrint ? '4mm' : '16px',
         fontFamily: 'Arial, sans-serif',
-        fontSize: '12pt',
+        fontSize: forPrint ? '9pt' : '14px',
         display: 'flex',
         flexDirection: 'column',
         pageBreakInside: 'avoid',
         backgroundColor: '#fff',
         boxSizing: 'border-box',
-        borderRadius: '4px',
+        borderRadius: '6px',
       }}
     >
       {/* Tiêu đề */}
       <div style={{
         textAlign: 'center',
         fontWeight: 'bold',
-        fontSize: '16pt',
-        marginBottom: '5mm',
+        fontSize: forPrint ? '11pt' : '18px',
+        marginBottom: forPrint ? '3mm' : '12px',
         borderBottom: '2px solid #333',
-        paddingBottom: '3mm'
+        paddingBottom: forPrint ? '2mm' : '8px'
       }}>
         {config.cardTitle}
       </div>
 
       {/* Nội dung: Thông tin bên trái, QR bên phải */}
-      <div style={{ display: 'flex', flex: 1, gap: '5mm' }}>
+      <div style={{ display: 'flex', flex: 1, gap: forPrint ? '4mm' : '16px' }}>
         {/* Thông tin bên trái */}
         <div style={{
           flex: 1,
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'center',
-          lineHeight: '1.8',
-          paddingRight: '4mm',
+          lineHeight: '1.6',
         }}>
           {config.showCode && (
-            <div style={{ marginBottom: '2mm', fontSize: '13pt' }}><strong>Mã:</strong> {data.code}</div>
+            <div style={{ marginBottom: forPrint ? '1mm' : '6px' }}><strong>Mã:</strong> {data.code}</div>
           )}
           {config.showVarietyName && (
-            <div style={{ marginBottom: '2mm', fontSize: '13pt' }}><strong>Giống:</strong> {data.varietyName}</div>
+            <div style={{ marginBottom: forPrint ? '1mm' : '6px' }}><strong>Giống:</strong> {data.varietyName}</div>
           )}
           {config.showCategory && (
-            <div style={{ marginBottom: '2mm', fontSize: '13pt' }}><strong>Loại:</strong> {data.categoryName}</div>
+            <div style={{ marginBottom: forPrint ? '1mm' : '6px' }}><strong>Loại:</strong> {data.categoryName}</div>
           )}
           {config.showScientificName && data.scientificName && (
-            <div style={{ marginBottom: '2mm', fontSize: '13pt' }}><strong>Tên KH:</strong> <em>{data.scientificName}</em></div>
+            <div style={{ marginBottom: forPrint ? '1mm' : '6px' }}><strong>Tên KH:</strong> <em>{data.scientificName}</em></div>
           )}
           {config.showCollectionDate && (
-            <div style={{ marginBottom: '2mm', fontSize: '13pt' }}><strong>Thu thập:</strong> {dayjs(data.collectionDate).format('DD/MM/YYYY')}</div>
+            <div style={{ marginBottom: forPrint ? '1mm' : '6px' }}><strong>Thu thập:</strong> {dayjs(data.collectionDate).format('DD/MM/YYYY')}</div>
           )}
           {config.showLocation && data.location && (
-            <div style={{ marginBottom: '2mm', fontSize: '13pt' }}><strong>Địa điểm:</strong> {data.location}</div>
+            <div style={{ marginBottom: forPrint ? '1mm' : '6px' }}><strong>Địa điểm:</strong> {data.location}</div>
           )}
           {config.showProvider && data.providerName && (
-            <div style={{ marginBottom: '2mm', fontSize: '13pt' }}><strong>Nguồn:</strong> {data.providerName}</div>
+            <div style={{ marginBottom: forPrint ? '1mm' : '6px' }}><strong>Nguồn:</strong> {data.providerName}</div>
           )}
           {config.showGerminationRate && data.germinationRate !== undefined && (
-            <div style={{ marginBottom: '2mm', fontSize: '13pt' }}><strong>Nảy mầm:</strong> {data.germinationRate}%</div>
+            <div style={{ marginBottom: forPrint ? '1mm' : '6px' }}><strong>Nảy mầm:</strong> {data.germinationRate}%</div>
           )}
           {config.showExpiryDate && data.expiryDate && (
-            <div style={{ marginBottom: '2mm', fontSize: '13pt' }}><strong>Hết hạn:</strong> {dayjs(data.expiryDate).format('DD/MM/YYYY')}</div>
+            <div style={{ marginBottom: forPrint ? '1mm' : '6px' }}><strong>Hết hạn:</strong> {dayjs(data.expiryDate).format('DD/MM/YYYY')}</div>
           )}
           {config.showStorageLocation && data.storageLocation && (
-            <div style={{ marginBottom: '2mm', fontSize: '13pt' }}><strong>Vị trí:</strong> {data.storageLocation}</div>
+            <div style={{ marginBottom: forPrint ? '1mm' : '6px' }}><strong>Vị trí:</strong> {data.storageLocation}</div>
           )}
         </div>
 
@@ -133,11 +138,10 @@ const SeedCard = ({ data, config }: { data: SeedCardData; config: SeedCardConfig
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            borderLeft: '2px dashed #999',
-            paddingLeft: '5mm',
-            minWidth: `${config.qrCodeSize + 20}px`,
+            borderLeft: '2px dashed #ccc',
+            paddingLeft: forPrint ? '3mm' : '16px',
           }}>
-            <QRCodeSVG value={data.qrCodeData} size={config.qrCodeSize} />
+            <QRCodeSVG value={data.qrCodeData} size={forPrint ? config.qrCodeSize * 0.7 : config.qrCodeSize} />
           </div>
         )}
       </div>
@@ -146,12 +150,12 @@ const SeedCard = ({ data, config }: { data: SeedCardData; config: SeedCardConfig
 };
 
 // Component để in nhiều thẻ
-const PrintableCards = ({ cards, config }: { cards: SeedCardData[]; config: SeedCardConfig }) => {
+const PrintableCards = ({ cards, config, forPrint = false }: { cards: SeedCardData[]; config: SeedCardConfig; forPrint?: boolean }) => {
   return (
-    <div style={{ padding: '10mm' }}>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5mm' }}>
+    <div style={{ padding: forPrint ? '10mm' : '20px' }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: forPrint ? '5mm' : '20px', justifyContent: 'center' }}>
         {cards.map((card) => (
-          <SeedCard key={card.id} data={card} config={config} />
+          <SeedCard key={card.id} data={card} config={config} forPrint={forPrint} />
         ))}
       </div>
     </div>
@@ -431,8 +435,8 @@ export default function SeedCardPage() {
         title="Xem trước thẻ giống"
         open={previewVisible}
         onCancel={() => setPreviewVisible(false)}
-        width="90%"
-        style={{ maxWidth: 900 }}
+        width={600}
+        centered
         footer={[
           <Button key="close" onClick={() => setPreviewVisible(false)}>
             Đóng
@@ -447,7 +451,7 @@ export default function SeedCardPage() {
           </Button>,
         ]}
       >
-        <div style={{ maxHeight: '60vh', overflow: 'auto' }}>
+        <div style={{ maxHeight: '70vh', overflow: 'auto', display: 'flex', justifyContent: 'center' }}>
           <PrintableCards cards={previewData} config={config} />
         </div>
       </Modal>
@@ -556,7 +560,7 @@ export default function SeedCardPage() {
       {/* Hidden component for printing */}
       <div style={{ display: 'none' }}>
         <div ref={printRef}>
-          <PrintableCards cards={previewData} config={config} />
+          <PrintableCards cards={previewData} config={config} forPrint={true} />
         </div>
       </div>
     </div>
