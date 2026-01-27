@@ -112,10 +112,12 @@ export default function PropagationPage() {
         search,
         status: statusFilter,
       });
-      setData(result.data);
-      setTotal(result.meta.total);
-    } catch (error) {
-      message.error('Không thể tải dữ liệu');
+      console.log('Propagation result:', result);
+      setData(result.data || []);
+      setTotal(result.meta?.total || result.total || 0);
+    } catch (error: any) {
+      console.error('Fetch propagation error:', error);
+      message.error(error.response?.data?.message || 'Không thể tải dữ liệu');
     } finally {
       setLoading(false);
     }
@@ -197,9 +199,11 @@ export default function PropagationPage() {
         message.success('Tạo mới thành công');
       }
       setIsModalOpen(false);
+      form.resetFields();
       fetchData();
-    } catch (error) {
-      message.error('Thao tác thất bại');
+    } catch (error: any) {
+      console.error('Submit error:', error);
+      message.error(error.response?.data?.message || 'Thao tác thất bại');
     }
   };
 
