@@ -262,10 +262,10 @@ export default function PropagationPage() {
     },
     {
       title: 'Mẫu gốc',
-      dataIndex: ['sample', 'sampleCode'],
+      dataIndex: ['sample', 'code'],
       key: 'sample',
       render: (_: any, record: PropagationBatch) => (
-        <span>{record.sample?.sampleCode} - {record.sample?.sampleName}</span>
+        <span>{record.sample?.code} - {record.sample?.varietyName || record.sample?.localName || ''}</span>
       ),
     },
     {

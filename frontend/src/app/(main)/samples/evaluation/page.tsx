@@ -172,15 +172,16 @@ export default function SampleEvaluationPage() {
   const columns = [
     {
       title: 'Mã mẫu',
-      dataIndex: ['sample', 'sampleCode'],
+      dataIndex: ['sample', 'code'],
       key: 'sampleCode',
       width: 130,
     },
     {
       title: 'Tên mẫu',
-      dataIndex: ['sample', 'sampleName'],
+      dataIndex: ['sample', 'varietyName'],
       key: 'sampleName',
       ellipsis: true,
+      render: (text: string, record: any) => text || record.sample?.localName || '-',
     },
     {
       title: 'Ngày đánh giá',
