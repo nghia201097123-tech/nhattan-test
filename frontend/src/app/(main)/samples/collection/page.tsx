@@ -270,13 +270,15 @@ export default function SampleCollectionPage() {
 
   const handleSubmit = async (values: any) => {
     try {
+      // Format date and remove invalid fields
       const collectionDate = values.collectionDate?.format('YYYY-MM-DD');
-      const collectionYear = values.collectionDate ? values.collectionDate.year() : undefined;
+
+      // Remove attachments from payload (handle separately if needed)
+      const { attachments, collectionDate: _, ...rest } = values;
 
       const payload = {
-        ...values,
+        ...rest,
         collectionDate,
-        collectionYear,
       };
 
       if (selectedRecord) {
@@ -287,9 +289,12 @@ export default function SampleCollectionPage() {
         message.success('Tạo mới thành công');
       }
       setIsModalOpen(false);
+      form.resetFields();
+      setFileList([]);
       fetchData();
-    } catch (error) {
-      message.error('Thao tác thất bại');
+    } catch (error: any) {
+      console.error('Submit error:', error);
+      message.error(error.response?.data?.message || 'Thao tác thất bại');
     }
   };
 
@@ -535,17 +540,12 @@ export default function SampleCollectionPage() {
           <Divider orientation="left">Thông tin mẫu</Divider>
 
           <Row gutter={16}>
-            <Col span={6}>
-              <Form.Item name="initialQuantity" label="Số lượng ban đầu" rules={[{ required: true, message: 'Vui lòng nhập số lượng' }]}>
+            <Col span={8}>
+              <Form.Item name="initialQuantity" label="Số lượng thu nhận">
                 <InputNumber style={{ width: '100%' }} min={0} placeholder="Nhập số lượng" />
               </Form.Item>
             </Col>
-            <Col span={6}>
-              <Form.Item name="currentQuantity" label="Số lượng hiện tại">
-                <InputNumber style={{ width: '100%' }} min={0} placeholder="Nhập số lượng" />
-              </Form.Item>
-            </Col>
-            <Col span={6}>
+            <Col span={8}>
               <Form.Item name="quantityUnit" label="Đơn vị" initialValue="gram">
                 <Select>
                   <Select.Option value="gram">Gram</Select.Option>
@@ -554,7 +554,7 @@ export default function SampleCollectionPage() {
                 </Select>
               </Form.Item>
             </Col>
-            <Col span={6}>
+            <Col span={8}>
               <Form.Item name="sampleCondition" label="Tình trạng mẫu">
                 <Select placeholder="Chọn tình trạng" allowClear options={conditionOptions} />
               </Form.Item>
