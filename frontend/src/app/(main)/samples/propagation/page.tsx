@@ -584,7 +584,7 @@ export default function PropagationPage() {
             <Descriptions.Item label="Mã đợt">{selectedRecord.code}</Descriptions.Item>
             <Descriptions.Item label="Tên đợt">{selectedRecord.name || '-'}</Descriptions.Item>
             <Descriptions.Item label="Mẫu gốc">
-              {selectedRecord.sample?.sampleCode} - {selectedRecord.sample?.sampleName}
+              {selectedRecord.sample?.code} - {selectedRecord.sample?.varietyName || selectedRecord.sample?.localName || '-'}
             </Descriptions.Item>
             <Descriptions.Item label="Người phụ trách">
               {selectedRecord.propagator?.fullName || '-'}

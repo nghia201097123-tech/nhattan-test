@@ -33,11 +33,12 @@ import { SeedCardService } from './seed-card/seed-card.service';
     ]),
   ],
   controllers: [
-    CollectionController,
-    EvaluationController,
-    AttachmentsController,
-    PropagationController,
-    SeedCardController,
+    // Specific routes must be registered first to avoid conflicts with wildcard routes
+    PropagationController,    // /samples/propagation
+    SeedCardController,       // /samples/seed-card
+    AttachmentsController,    // /samples/attachments
+    EvaluationController,     // /evaluations
+    CollectionController,     // /samples - has wildcard route /samples/:id, must be last
   ],
   providers: [
     CollectionService,
