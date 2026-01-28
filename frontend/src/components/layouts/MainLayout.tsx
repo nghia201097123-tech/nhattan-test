@@ -15,6 +15,9 @@ import {
   MenuUnfoldOutlined,
   AppstoreOutlined,
   GlobalOutlined,
+  SwapOutlined,
+  BarChartOutlined,
+  IdcardOutlined,
 } from '@ant-design/icons';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuthStore } from '@/store/auth.store';
@@ -61,7 +64,10 @@ export default function MainLayout({ children }: MainLayoutProps) {
       label: t.menu.warehouse,
       children: [
         { key: '/warehouse/receipts', icon: <ImportOutlined />, label: t.menu.receipts },
+        { key: '/warehouse/transfers', icon: <SwapOutlined />, label: 'Chuyển kho' },
         { key: '/warehouse/exports', icon: <ExportOutlined />, label: t.menu.exports },
+        { key: '/warehouse/statistics', icon: <BarChartOutlined />, label: 'Thống kê' },
+        { key: '/warehouse/warehouse-card', icon: <IdcardOutlined />, label: 'Thẻ kho' },
         { key: '/warehouse/inventory', label: t.menu.inventory },
       ],
     },

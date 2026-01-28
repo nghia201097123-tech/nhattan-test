@@ -139,4 +139,105 @@ export const inventoryService = {
     );
     return response.data;
   },
+
+  async getReport(params: {
+    warehouseId?: string;
+    categoryId?: string;
+    fromDate?: string;
+    toDate?: string;
+  }): Promise<any[]> {
+    const response = await api.get('/warehouse/inventory/report', { params });
+    return response.data;
+  },
+
+  async getSummary(params?: {
+    warehouseId?: string;
+    fromDate?: string;
+    toDate?: string;
+  }): Promise<any> {
+    const response = await api.get('/warehouse/inventory/summary', { params });
+    return response.data;
+  },
+
+  async getChart(params: {
+    warehouseId?: string;
+    fromDate?: string;
+    toDate?: string;
+    groupBy?: 'day' | 'week' | 'month';
+  }): Promise<any[]> {
+    const response = await api.get('/warehouse/inventory/chart', { params });
+    return response.data;
+  },
+};
+
+// Transfer Service
+export interface WarehouseTransfer {
+  id: string;
+  transferNumber: string;
+  fromWarehouseId: string;
+  fromWarehouse?: any;
+  toWarehouseId: string;
+  toWarehouse?: any;
+  transferDate: string;
+  status: 'DRAFT' | 'IN_TRANSIT' | 'COMPLETED' | 'CANCELLED';
+  totalItems: number;
+  notes?: string;
+  items?: any[];
+  createdAt: string;
+  creator?: any;
+}
+
+export const transfersService = {
+  async getAll(params?: PaginationParams & {
+    fromWarehouseId?: string;
+    toWarehouseId?: string;
+    status?: string;
+    dateFrom?: string;
+    dateTo?: string;
+  }): Promise<PaginatedResult<WarehouseTransfer>> {
+    const response = await api.get<PaginatedResult<WarehouseTransfer>>(
+      '/warehouse/transfers',
+      { params }
+    );
+    return response.data;
+  },
+
+  async getById(id: string): Promise<WarehouseTransfer> {
+    const response = await api.get<WarehouseTransfer>(`/warehouse/transfers/${id}`);
+    return response.data;
+  },
+
+  async generateNumber(): Promise<{ transferNumber: string }> {
+    const response = await api.get<{ transferNumber: string }>('/warehouse/transfers/generate-number');
+    return response.data;
+  },
+
+  async create(data: any): Promise<WarehouseTransfer> {
+    const response = await api.post<WarehouseTransfer>('/warehouse/transfers', data);
+    return response.data;
+  },
+
+  async update(id: string, data: any): Promise<WarehouseTransfer> {
+    const response = await api.put<WarehouseTransfer>(`/warehouse/transfers/${id}`, data);
+    return response.data;
+  },
+
+  async delete(id: string): Promise<void> {
+    await api.delete(`/warehouse/transfers/${id}`);
+  },
+
+  async send(id: string): Promise<WarehouseTransfer> {
+    const response = await api.patch<WarehouseTransfer>(`/warehouse/transfers/${id}/send`);
+    return response.data;
+  },
+
+  async receive(id: string): Promise<WarehouseTransfer> {
+    const response = await api.patch<WarehouseTransfer>(`/warehouse/transfers/${id}/receive`);
+    return response.data;
+  },
+
+  async cancel(id: string): Promise<WarehouseTransfer> {
+    const response = await api.patch<WarehouseTransfer>(`/warehouse/transfers/${id}/cancel`);
+    return response.data;
+  },
 };
