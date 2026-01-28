@@ -22,7 +22,7 @@ import {
   DatabaseOutlined,
 } from '@ant-design/icons';
 import { inventoryService } from '@/services/warehouse.service';
-import { warehousesService, categoriesService } from '@/services/catalog.service';
+import { warehousesService, seedCategoriesService } from '@/services/catalog.service';
 import dayjs from 'dayjs';
 import {
   BarChart,
@@ -59,10 +59,11 @@ export default function StatisticsPage() {
     try {
       const [warehousesRes, categoriesRes] = await Promise.all([
         warehousesService.getAll({ page: 1, limit: 500 }),
-        categoriesService.getAll({ page: 1, limit: 500 }),
+        seedCategoriesService.getAll(),
       ]);
       setWarehouses(warehousesRes.data || []);
-      setCategories(categoriesRes.data || []);
+      // seedCategoriesService.getAll() returns array directly
+      setCategories(Array.isArray(categoriesRes) ? categoriesRes : []);
     } catch (error) {
       console.error('Error loading dropdown data:', error);
     }

@@ -28,23 +28,10 @@ import {
   EyeOutlined,
 } from '@ant-design/icons';
 import { seedCategoriesService } from '@/services/catalog.service';
+import { SeedCategory } from '@/types';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
-
-interface SeedCategory {
-  id: string;
-  code: string;
-  name: string;
-  description?: string;
-  level: number;
-  parentId?: string;
-  sortOrder: number;
-  isActive: boolean;
-  children?: SeedCategory[];
-  createdAt?: string;
-  updatedAt?: string;
-}
 
 export default function CategoriesPage() {
   const [data, setData] = useState<SeedCategory[]>([]);

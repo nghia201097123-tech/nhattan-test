@@ -87,8 +87,9 @@ export default function WarehouseExportsPage() {
 
   const loadReasons = async () => {
     try {
-      const res = await exportReasonsService.getAll({ page: 1, limit: 500 });
-      setReasons(res.data || []);
+      // exportReasonsService.getAll returns array directly (not paginated)
+      const res = await exportReasonsService.getAll(true);
+      setReasons(Array.isArray(res) ? res : []);
     } catch (error) {
       console.error('Error loading reasons:', error);
     }

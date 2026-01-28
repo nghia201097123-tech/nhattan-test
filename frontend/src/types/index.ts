@@ -65,10 +65,13 @@ export interface SeedCategory {
   code: string;
   description?: string;
   parentId?: string;
-  path: string;
+  path?: string;
   level: number;
+  sortOrder?: number;
   isActive: boolean;
   children?: SeedCategory[];
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface SeedVariety {
@@ -151,30 +154,49 @@ export interface SampleProvider {
 // Sample types
 export interface Sample {
   id: string;
-  sampleCode: string;
-  sampleName: string;
-  categoryId: string;
-  category?: SeedCategory;
+  code: string;
   varietyId?: string;
   variety?: SeedVariety;
+  categoryId: string;
+  category?: SeedCategory;
+  varietyName?: string;
+  localName?: string;
+  scientificName?: string;
+  collectionDate: string;
+  collectionYear?: number;
+  season?: string;
+  locationId?: string;
+  location?: Location;
+  locationDetail?: string;
+  latitude?: number;
+  longitude?: number;
+  altitude?: number;
   providerId?: string;
   provider?: SampleProvider;
-  collectionDate: string;
-  collectionLocation?: string;
+  providerName?: string;
   collectorId?: string;
-  quantity: number;
-  unit: string;
+  collector?: Staff;
+  initialQuantity?: number;
+  currentQuantity?: number;
+  quantityUnit?: string;
+  morphology?: string;
+  characteristics?: string;
+  sampleCondition?: string;
   status: SampleStatus;
-  storageLocationId?: string;
-  storageLocation?: StorageLocation;
-  warehouseId?: string;
-  warehouse?: Warehouse;
+  currentWarehouseId?: string;
+  currentWarehouse?: Warehouse;
+  currentLocationId?: string;
+  currentLocation?: StorageLocation;
   lastEvaluationDate?: string;
   lastGerminationRate?: number;
+  storageDate?: string;
+  expiryDate?: string;
   nextEvaluationDate?: string;
   notes?: string;
   createdAt: string;
   updatedAt: string;
+  createdBy?: string;
+  updatedBy?: string;
 }
 
 export type SampleStatus =

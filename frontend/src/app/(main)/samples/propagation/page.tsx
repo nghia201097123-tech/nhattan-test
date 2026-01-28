@@ -114,7 +114,7 @@ export default function PropagationPage() {
       });
       console.log('Propagation result:', result);
       setData(result.data || []);
-      setTotal(result.meta?.total || result.total || 0);
+      setTotal(result.meta?.total || 0);
     } catch (error: any) {
       console.error('Fetch propagation error:', error);
       message.error(error.response?.data?.message || 'Không thể tải dữ liệu');

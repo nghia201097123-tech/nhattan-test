@@ -59,9 +59,8 @@ export default function VarietiesPage() {
         params.categoryId = selectedCategory;
       }
       const result = await seedVarietiesService.getAll(params);
-      // Handle both paginated and array response
-      const items = Array.isArray(result) ? result : (result.data || result.items || []);
-      setData(items);
+      // Handle paginated response
+      setData(result.data || []);
     } catch (error) {
       message.error('Không thể tải danh sách giống');
     } finally {

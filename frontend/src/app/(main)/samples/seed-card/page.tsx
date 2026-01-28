@@ -58,8 +58,11 @@ const SeedCard = ({ data, config, forPrint = false }: { data: SeedCardData; conf
   // Kích thước cho preview (px) vs print (mm)
   const scale = forPrint ? 1 : 3.78; // 1mm ≈ 3.78px
   const unit = forPrint ? 'mm' : 'px';
-  const width = forPrint ? config.cardWidth : config.cardWidth * scale;
-  const height = forPrint ? config.cardHeight : config.cardHeight * scale;
+  const cardWidth = config.cardWidth || 85;
+  const cardHeight = config.cardHeight || 54;
+  const qrCodeSize = config.qrCodeSize || 120;
+  const width = forPrint ? cardWidth : cardWidth * scale;
+  const height = forPrint ? cardHeight : cardHeight * scale;
 
   return (
     <div
@@ -141,7 +144,7 @@ const SeedCard = ({ data, config, forPrint = false }: { data: SeedCardData; conf
             borderLeft: '2px dashed #ccc',
             paddingLeft: forPrint ? '3mm' : '16px',
           }}>
-            <QRCodeSVG value={data.qrCodeData} size={forPrint ? config.qrCodeSize * 0.7 : config.qrCodeSize} />
+            <QRCodeSVG value={data.qrCodeData} size={forPrint ? qrCodeSize * 0.7 : qrCodeSize} />
           </div>
         )}
       </div>

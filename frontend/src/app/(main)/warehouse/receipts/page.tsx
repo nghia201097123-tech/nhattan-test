@@ -97,8 +97,9 @@ export default function WarehouseReceiptsPage() {
       return;
     }
     try {
-      const res = await storageLocationsService.getAll({ page: 1, limit: 500, warehouseId });
-      setLocations(res.data || []);
+      // Load with full path for better UX
+      const res = await storageLocationsService.getFlatWithPath(warehouseId);
+      setLocations(res || []);
     } catch (error) {
       console.error('Error loading locations:', error);
     }
@@ -424,10 +425,10 @@ export default function WarehouseReceiptsPage() {
                     </Form.Item>
 
                     <Form.Item {...restField} name={[name, 'locationId']}>
-                      <Select placeholder="Vị trí" allowClear>
-                        {locations.map((l) => (
+                      <Select placeholder="Vị trí lưu trữ" allowClear showSearch optionFilterProp="children">
+                        {locations.map((l: any) => (
                           <Select.Option key={l.id} value={l.id}>
-                            {l.name}
+                            {l.fullPath || l.name}
                           </Select.Option>
                         ))}
                       </Select>

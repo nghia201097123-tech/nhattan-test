@@ -111,10 +111,20 @@ export const locationsService = {
 // Warehouses
 export const warehousesService = {
   async getAll(params?: PaginationParams): Promise<PaginatedResult<Warehouse>> {
-    const response = await api.get<PaginatedResult<Warehouse>>('/catalog/warehouses', {
+    const response = await api.get<Warehouse[]>('/catalog/warehouses', {
       params,
     });
-    return response.data;
+    // Backend returns array directly, wrap it in PaginatedResult format
+    const data = response.data;
+    return {
+      data: Array.isArray(data) ? data : [],
+      meta: {
+        total: Array.isArray(data) ? data.length : 0,
+        page: 1,
+        limit: Array.isArray(data) ? data.length : 0,
+        totalPages: 1,
+      },
+    };
   },
 
   async getById(id: string): Promise<Warehouse> {
@@ -147,12 +157,48 @@ export const storageLocationsService = {
     return response.data;
   },
 
+  async getAll(params?: PaginationParams & { warehouseId?: string }): Promise<PaginatedResult<StorageLocation>> {
+    const response = await api.get<StorageLocation[]>(
+      '/catalog/storage-locations',
+      { params }
+    );
+    const data = response.data;
+    return {
+      data: Array.isArray(data) ? data : [],
+      meta: {
+        total: Array.isArray(data) ? data.length : 0,
+        page: 1,
+        limit: Array.isArray(data) ? data.length : 0,
+        totalPages: 1,
+      },
+    };
+  },
+
   async getTree(warehouseId: string): Promise<StorageLocation[]> {
     const response = await api.get<StorageLocation[]>(
       '/catalog/storage-locations/tree',
       { params: { warehouseId } }
     );
     return response.data;
+  },
+
+  // Get flat list with full path names for dropdowns
+  async getFlatWithPath(warehouseId: string): Promise<Array<StorageLocation & { fullPath: string }>> {
+    const tree = await this.getTree(warehouseId);
+    const result: Array<StorageLocation & { fullPath: string }> = [];
+
+    const flatten = (items: any[], parentPath: string = '') => {
+      for (const item of items) {
+        const currentPath = parentPath ? `${parentPath} > ${item.name}` : item.name;
+        result.push({ ...item, fullPath: currentPath });
+        if (item.children && item.children.length > 0) {
+          flatten(item.children, currentPath);
+        }
+      }
+    };
+
+    flatten(tree);
+    return result;
   },
 
   async getById(id: string): Promise<StorageLocation> {

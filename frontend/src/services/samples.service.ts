@@ -10,7 +10,7 @@ import {
 } from '@/types';
 
 export const samplesService = {
-  async getAll(params?: PaginationParams): Promise<PaginatedResult<Sample>> {
+  async getAll(params?: PaginationParams & { warehouseId?: string; categoryId?: string; status?: string }): Promise<PaginatedResult<Sample>> {
     const response = await api.get<PaginatedResult<Sample>>('/samples', {
       params,
     });

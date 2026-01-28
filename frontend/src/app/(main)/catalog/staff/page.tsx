@@ -51,7 +51,7 @@ export default function StaffPage() {
     try {
       const result = await usersService.getAll({ page, limit: pageSize });
       setUsers(result.data);
-      setPagination({ current: page, pageSize, total: result.total });
+      setPagination({ current: page, pageSize, total: result.meta?.total || 0 });
     } catch (error) {
       message.error('Không thể tải danh sách nhân viên');
     } finally {
