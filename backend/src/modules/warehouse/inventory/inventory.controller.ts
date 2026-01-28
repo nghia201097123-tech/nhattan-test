@@ -45,4 +45,40 @@ export class InventoryController {
   ) {
     return this.service.getStockCard(sampleId, warehouseId);
   }
+
+  @Get('report')
+  @ApiOperation({ summary: 'Báo cáo nhập-xuất-tồn theo kỳ' })
+  async getInventoryReport(
+    @Query('warehouseId') warehouseId?: string,
+    @Query('categoryId') categoryId?: string,
+    @Query('fromDate') fromDate?: string,
+    @Query('toDate') toDate?: string,
+  ) {
+    const from = fromDate || new Date(new Date().getFullYear(), 0, 1).toISOString().slice(0, 10);
+    const to = toDate || new Date().toISOString().slice(0, 10);
+    return this.service.getInventoryReport({ warehouseId, categoryId, fromDate: from, toDate: to });
+  }
+
+  @Get('summary')
+  @ApiOperation({ summary: 'Thống kê tổng quan kho' })
+  async getSummaryStatistics(
+    @Query('warehouseId') warehouseId?: string,
+    @Query('fromDate') fromDate?: string,
+    @Query('toDate') toDate?: string,
+  ) {
+    return this.service.getSummaryStatistics({ warehouseId, fromDate, toDate });
+  }
+
+  @Get('chart')
+  @ApiOperation({ summary: 'Biểu đồ biến động nhập-xuất' })
+  async getMovementChart(
+    @Query('warehouseId') warehouseId?: string,
+    @Query('fromDate') fromDate?: string,
+    @Query('toDate') toDate?: string,
+    @Query('groupBy') groupBy?: 'day' | 'week' | 'month',
+  ) {
+    const from = fromDate || new Date(new Date().getFullYear(), 0, 1).toISOString().slice(0, 10);
+    const to = toDate || new Date().toISOString().slice(0, 10);
+    return this.service.getMovementChart({ warehouseId, fromDate: from, toDate: to, groupBy: groupBy || 'month' });
+  }
 }
