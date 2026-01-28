@@ -336,10 +336,15 @@ export default function WarehouseReceiptsPage() {
       <Modal
         title={editingId ? 'Sửa phiếu nhập kho' : 'Tạo phiếu nhập kho'}
         open={isModalOpen}
-        onCancel={() => setIsModalOpen(false)}
+        onCancel={() => {
+          form.resetFields();
+          setLocations([]);
+          setIsModalOpen(false);
+        }}
         onOk={() => form.submit()}
         confirmLoading={submitting}
         width={900}
+        destroyOnClose
       >
         <Form form={form} layout="vertical" onFinish={handleSubmit}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 }}>
