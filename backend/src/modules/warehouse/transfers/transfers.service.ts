@@ -296,8 +296,8 @@ export class TransfersService {
 
         // Update sample warehouse and location
         await queryRunner.manager.update(Sample, item.sampleId, {
-          warehouseId: transfer.toWarehouseId,
-          storageLocationId: item.toLocationId || null,
+          currentWarehouseId: transfer.toWarehouseId,
+          currentLocationId: item.toLocationId || null,
           currentQuantity: () => `current_quantity + ${item.quantity}`,
         });
       }
