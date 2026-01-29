@@ -1,6 +1,0 @@
-projectKey=nodejs-food-channel-controller
-serverUrl=http://172.16.10.81:9000
-serverVersion=10.6.0.92116
-dashboardUrl=http://172.16.10.81:9000/dashboard?id=nodejs-food-channel-controller
-ceTaskId=d46c6699-104b-4277-bc17-ecb388fb8ab0
-ceTaskUrl=http://172.16.10.81:9000/api/ce/task?id=d46c6699-104b-4277-bc17-ecb388fb8ab0
