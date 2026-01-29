@@ -19,6 +19,7 @@ import {
   Drawer,
   Descriptions,
   Popconfirm,
+  Cascader,
 } from 'antd';
 import {
   PlusOutlined,
@@ -69,9 +70,32 @@ export default function WarehouseReceiptsPage() {
   const [form] = Form.useForm();
 
   const [warehouses, setWarehouses] = useState<any[]>([]);
-  const [locations, setLocations] = useState<any[]>([]);
+  const [locationTree, setLocationTree] = useState<any[]>([]);
+  const [locationOptions, setLocationOptions] = useState<any[]>([]);
   const [samples, setSamples] = useState<any[]>([]);
   const [submitting, setSubmitting] = useState(false);
+
+  // Convert tree data to Cascader options format
+  const treeToCascaderOptions = (tree: any[]): any[] => {
+    return tree.map(node => ({
+      value: node.id,
+      label: node.name,
+      children: node.children?.length > 0 ? treeToCascaderOptions(node.children) : undefined,
+    }));
+  };
+
+  // Find full path (array of IDs) in tree for a given locationId
+  const findPathInTree = (tree: any[], targetId: string, path: string[] = []): string[] | null => {
+    for (const node of tree) {
+      const currentPath = [...path, node.id];
+      if (node.id === targetId) return currentPath;
+      if (node.children?.length > 0) {
+        const found = findPathInTree(node.children, targetId, currentPath);
+        if (found) return found;
+      }
+    }
+    return null;
+  };
 
   const loadWarehouses = async () => {
     try {
@@ -93,13 +117,14 @@ export default function WarehouseReceiptsPage() {
 
   const loadLocations = async (warehouseId?: string) => {
     if (!warehouseId) {
-      setLocations([]);
+      setLocationTree([]);
+      setLocationOptions([]);
       return;
     }
     try {
-      // Load with full path for better UX
-      const res = await storageLocationsService.getFlatWithPath(warehouseId);
-      setLocations(res || []);
+      const tree = await storageLocationsService.getTree(warehouseId);
+      setLocationTree(tree || []);
+      setLocationOptions(treeToCascaderOptions(tree || []));
     } catch (error) {
       console.error('Error loading locations:', error);
     }
@@ -150,12 +175,14 @@ export default function WarehouseReceiptsPage() {
   const handleEdit = async (record: any) => {
     setEditingId(record.id);
     await loadLocations(record.warehouseId);
+    // Need to wait for locationTree to be available to reconstruct cascade paths
+    const tree = await storageLocationsService.getTree(record.warehouseId);
     form.setFieldsValue({
       ...record,
       receiptDate: dayjs(record.receiptDate),
       items: record.items?.map((item: any) => ({
         sampleId: item.sampleId,
-        locationId: item.locationId,
+        locationPath: item.locationId ? findPathInTree(tree || [], item.locationId) : undefined,
         quantity: item.quantity,
         unit: item.unit || 'g',
       })) || [{}],
@@ -189,6 +216,15 @@ export default function WarehouseReceiptsPage() {
       const payload = {
         ...values,
         receiptDate: values.receiptDate?.format('YYYY-MM-DD'),
+        items: values.items?.map((item: any) => ({
+          sampleId: item.sampleId,
+          // Extract the last ID from cascader path array as the actual locationId
+          locationId: Array.isArray(item.locationPath)
+            ? item.locationPath[item.locationPath.length - 1]
+            : item.locationPath || null,
+          quantity: item.quantity,
+          unit: item.unit,
+        })),
       };
 
       if (editingId) {
@@ -338,7 +374,8 @@ export default function WarehouseReceiptsPage() {
         open={isModalOpen}
         onCancel={() => {
           form.resetFields();
-          setLocations([]);
+          setLocationTree([]);
+          setLocationOptions([]);
           setIsModalOpen(false);
         }}
         onOk={() => form.submit()}
@@ -410,7 +447,7 @@ export default function WarehouseReceiptsPage() {
                     key={key}
                     style={{
                       display: 'grid',
-                      gridTemplateColumns: '2fr 1fr 1fr 1fr auto',
+                      gridTemplateColumns: '2fr 2fr 1fr 1fr auto',
                       gap: 8,
                       marginBottom: 8,
                     }}
@@ -429,14 +466,19 @@ export default function WarehouseReceiptsPage() {
                       </Select>
                     </Form.Item>
 
-                    <Form.Item {...restField} name={[name, 'locationId']}>
-                      <Select placeholder="Vị trí lưu trữ" allowClear showSearch optionFilterProp="children">
-                        {locations.map((l: any) => (
-                          <Select.Option key={l.id} value={l.id}>
-                            {l.fullPath || l.name}
-                          </Select.Option>
-                        ))}
-                      </Select>
+                    <Form.Item {...restField} name={[name, 'locationPath']}>
+                      <Cascader
+                        options={locationOptions}
+                        placeholder="Chọn vị trí lưu trữ"
+                        changeOnSelect
+                        expandTrigger="hover"
+                        showSearch={{
+                          filter: (inputValue: string, path: any[]) =>
+                            path.some((option) =>
+                              (option.label as string).toLowerCase().includes(inputValue.toLowerCase())
+                            ),
+                        }}
+                      />
                     </Form.Item>
 
                     <Form.Item
