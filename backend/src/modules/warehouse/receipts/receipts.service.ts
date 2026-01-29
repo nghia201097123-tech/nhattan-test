@@ -154,6 +154,8 @@ export class ReceiptsService {
         receipt.totalItems = dto.items.length;
       }
 
+      // Clear items relation to prevent cascade re-save of stale items
+      delete (receipt as any).items;
       await queryRunner.manager.save(receipt);
       await queryRunner.commitTransaction();
 
