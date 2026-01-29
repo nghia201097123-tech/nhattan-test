@@ -195,6 +195,84 @@ export class InventoryService {
     }));
   }
 
+  // Lấy tồn kho khả dụng của 1 mẫu trong 1 kho
+  async getAvailableStock(warehouseId: string, sampleId: string): Promise<{
+    sampleId: string;
+    warehouseId: string;
+    availableQuantity: number;
+    unit: string;
+  }> {
+    const result = await this.repository
+      .createQueryBuilder('tx')
+      .select(
+        `SUM(CASE WHEN tx.transactionType IN ('IMPORT', 'TRANSFER_IN') THEN tx.quantity ELSE 0 END)`,
+        'totalIn',
+      )
+      .addSelect(
+        `SUM(CASE WHEN tx.transactionType IN ('EXPORT', 'TRANSFER_OUT') THEN ABS(tx.quantity) ELSE 0 END)`,
+        'totalOut',
+      )
+      .addSelect('MAX(tx.unit)', 'unit')
+      .where('tx.warehouseId = :warehouseId', { warehouseId })
+      .andWhere('tx.sampleId = :sampleId', { sampleId })
+      .getRawOne();
+
+    const totalIn = Number(result?.totalIn) || 0;
+    const totalOut = Number(result?.totalOut) || 0;
+
+    return {
+      sampleId,
+      warehouseId,
+      availableQuantity: totalIn - totalOut,
+      unit: result?.unit || 'g',
+    };
+  }
+
+  // Lấy tồn kho tất cả mẫu trong 1 kho (dùng cho frontend hiển thị danh sách)
+  async getAvailableStockByWarehouse(warehouseId: string): Promise<Array<{
+    sampleId: string;
+    sampleCode: string;
+    varietyName: string;
+    localName: string;
+    availableQuantity: number;
+    unit: string;
+  }>> {
+    const result = await this.repository
+      .createQueryBuilder('tx')
+      .select('tx.sampleId', 'sampleId')
+      .addSelect('sample.code', 'sampleCode')
+      .addSelect('sample.varietyName', 'varietyName')
+      .addSelect('sample.localName', 'localName')
+      .addSelect(
+        `SUM(CASE WHEN tx.transactionType IN ('IMPORT', 'TRANSFER_IN') THEN tx.quantity ELSE 0 END)`,
+        'totalIn',
+      )
+      .addSelect(
+        `SUM(CASE WHEN tx.transactionType IN ('EXPORT', 'TRANSFER_OUT') THEN ABS(tx.quantity) ELSE 0 END)`,
+        'totalOut',
+      )
+      .addSelect('MAX(tx.unit)', 'unit')
+      .leftJoin('tx.sample', 'sample')
+      .where('tx.warehouseId = :warehouseId', { warehouseId })
+      .groupBy('tx.sampleId')
+      .addGroupBy('sample.code')
+      .addGroupBy('sample.varietyName')
+      .addGroupBy('sample.localName')
+      .having(
+        `SUM(CASE WHEN tx.transactionType IN ('IMPORT', 'TRANSFER_IN') THEN tx.quantity ELSE 0 END) - SUM(CASE WHEN tx.transactionType IN ('EXPORT', 'TRANSFER_OUT') THEN ABS(tx.quantity) ELSE 0 END) > 0`,
+      )
+      .getRawMany();
+
+    return result.map((r) => ({
+      sampleId: r.sampleId,
+      sampleCode: r.sampleCode,
+      varietyName: r.varietyName,
+      localName: r.localName,
+      availableQuantity: Number(r.totalIn) - Number(r.totalOut),
+      unit: r.unit || 'g',
+    }));
+  }
+
   // Thống kê tổng quan
   async getSummaryStatistics(query: { warehouseId?: string; fromDate?: string; toDate?: string }) {
     const { warehouseId, fromDate, toDate } = query;

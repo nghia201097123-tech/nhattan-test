@@ -214,6 +214,32 @@ export class TransfersService {
       throw new BadRequestException('Phiếu chuyển kho phải có ít nhất 1 mẫu');
     }
 
+    // Validate: quantity không được vượt tồn kho
+    for (const item of transfer.items) {
+      const stockResult = await this.transactionRepo
+        .createQueryBuilder('tx')
+        .select(
+          `SUM(CASE WHEN tx.transactionType IN ('IMPORT', 'TRANSFER_IN') THEN tx.quantity ELSE 0 END)`,
+          'totalIn',
+        )
+        .addSelect(
+          `SUM(CASE WHEN tx.transactionType IN ('EXPORT', 'TRANSFER_OUT') THEN ABS(tx.quantity) ELSE 0 END)`,
+          'totalOut',
+        )
+        .where('tx.warehouseId = :warehouseId', { warehouseId: transfer.fromWarehouseId })
+        .andWhere('tx.sampleId = :sampleId', { sampleId: item.sampleId })
+        .getRawOne();
+
+      const available = (Number(stockResult?.totalIn) || 0) - (Number(stockResult?.totalOut) || 0);
+      const sampleName = item.sample?.code || item.sample?.varietyName || item.sampleId;
+
+      if (item.quantity > available) {
+        throw new BadRequestException(
+          `Mẫu "${sampleName}" chỉ còn tồn kho ${available} nhưng yêu cầu chuyển ${item.quantity}`,
+        );
+      }
+    }
+
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();

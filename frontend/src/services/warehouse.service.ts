@@ -41,6 +41,11 @@ export const receiptsService = {
   async delete(id: string): Promise<void> {
     await api.delete(`/warehouse/receipts/${id}`);
   },
+
+  async confirm(id: string): Promise<WarehouseReceipt> {
+    const response = await api.patch<WarehouseReceipt>(`/warehouse/receipts/${id}/confirm`);
+    return response.data;
+  },
 };
 
 export const exportsService = {
@@ -166,6 +171,30 @@ export const inventoryService = {
     groupBy?: 'day' | 'week' | 'month';
   }): Promise<any[]> {
     const response = await api.get('/warehouse/inventory/chart', { params });
+    return response.data;
+  },
+
+  async getAvailableStock(warehouseId: string, sampleId: string): Promise<{
+    sampleId: string;
+    warehouseId: string;
+    availableQuantity: number;
+    unit: string;
+  }> {
+    const response = await api.get('/warehouse/inventory/available-stock', {
+      params: { warehouseId, sampleId },
+    });
+    return response.data;
+  },
+
+  async getAvailableStockByWarehouse(warehouseId: string): Promise<Array<{
+    sampleId: string;
+    sampleCode: string;
+    varietyName: string;
+    localName: string;
+    availableQuantity: number;
+    unit: string;
+  }>> {
+    const response = await api.get(`/warehouse/inventory/available-stock-by-warehouse/${warehouseId}`);
     return response.data;
   },
 };

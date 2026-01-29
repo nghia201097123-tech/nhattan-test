@@ -1,8 +1,10 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
-import { WarehouseReceipt } from './entities/warehouse-receipt.entity';
+import { WarehouseReceipt, ReceiptStatus } from './entities/warehouse-receipt.entity';
 import { WarehouseReceiptItem } from './entities/warehouse-receipt-item.entity';
+import { InventoryTransaction, TransactionType, ReferenceType } from '../inventory/entities/inventory-transaction.entity';
+import { Sample } from '../../samples/collection/entities/sample.entity';
 import { PaginationDto, createPaginatedResult } from '../../../common/dto/pagination.dto';
 import { generateCode } from '../../../common/utils/code-generator.util';
 
@@ -13,6 +15,10 @@ export class ReceiptsService {
     private readonly repository: Repository<WarehouseReceipt>,
     @InjectRepository(WarehouseReceiptItem)
     private readonly itemRepository: Repository<WarehouseReceiptItem>,
+    @InjectRepository(InventoryTransaction)
+    private readonly transactionRepo: Repository<InventoryTransaction>,
+    @InjectRepository(Sample)
+    private readonly sampleRepo: Repository<Sample>,
     private readonly dataSource: DataSource,
   ) {}
 
@@ -163,10 +169,76 @@ export class ReceiptsService {
   async remove(id: string): Promise<void> {
     const receipt = await this.findById(id);
 
+    if (receipt.status === ReceiptStatus.CONFIRMED) {
+      throw new BadRequestException('Không thể xóa phiếu đã xác nhận');
+    }
+
     // Delete items first
     await this.itemRepository.delete({ receiptId: id });
 
     // Then delete receipt
     await this.repository.remove(receipt);
+  }
+
+  async confirm(id: string, userId: string): Promise<WarehouseReceipt> {
+    const receipt = await this.findById(id);
+
+    if (receipt.status === ReceiptStatus.CONFIRMED) {
+      throw new BadRequestException('Phiếu nhập đã được xác nhận');
+    }
+
+    if (receipt.status === ReceiptStatus.CANCELLED) {
+      throw new BadRequestException('Không thể xác nhận phiếu đã hủy');
+    }
+
+    if (!receipt.items || receipt.items.length === 0) {
+      throw new BadRequestException('Phiếu nhập phải có ít nhất 1 mẫu');
+    }
+
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      // Update receipt status
+      receipt.status = ReceiptStatus.CONFIRMED;
+      receipt.confirmedAt = new Date();
+      receipt.confirmedBy = userId;
+      await queryRunner.manager.save(receipt);
+
+      // Create IMPORT inventory transactions for each item
+      for (const item of receipt.items) {
+        const transaction = this.transactionRepo.create({
+          sampleId: item.sampleId,
+          warehouseId: receipt.warehouseId,
+          locationId: item.locationId || null,
+          transactionType: TransactionType.IMPORT,
+          quantity: item.quantity,
+          unit: item.unit || 'g',
+          referenceType: ReferenceType.RECEIPT,
+          referenceId: receipt.id,
+          referenceNumber: receipt.receiptNumber,
+          transactionDate: receipt.receiptDate || new Date(),
+          notes: `Nhập kho từ phiếu ${receipt.receiptNumber}`,
+          createdBy: userId,
+        });
+        await queryRunner.manager.save(transaction);
+
+        // Update sample currentQuantity, currentWarehouseId, currentLocationId
+        await queryRunner.manager.update(Sample, item.sampleId, {
+          currentWarehouseId: receipt.warehouseId,
+          currentLocationId: item.locationId || null,
+          currentQuantity: () => `COALESCE(current_quantity, 0) + ${Number(item.quantity)}`,
+        });
+      }
+
+      await queryRunner.commitTransaction();
+      return this.findById(id);
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      await queryRunner.release();
+    }
   }
 }

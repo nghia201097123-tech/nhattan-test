@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Card,
   Table,
@@ -19,6 +19,8 @@ import {
   Drawer,
   InputNumber,
   Divider,
+  Cascader,
+  Alert,
 } from 'antd';
 import {
   PlusOutlined,
@@ -29,11 +31,10 @@ import {
   SendOutlined,
   CheckOutlined,
   CloseOutlined,
-  SwapOutlined,
+  MinusCircleOutlined,
 } from '@ant-design/icons';
-import { transfersService, WarehouseTransfer } from '@/services/warehouse.service';
-import { warehousesService } from '@/services/catalog.service';
-import { samplesService } from '@/services/samples.service';
+import { transfersService, inventoryService, WarehouseTransfer } from '@/services/warehouse.service';
+import { warehousesService, storageLocationsService } from '@/services/catalog.service';
 import dayjs from 'dayjs';
 
 const { Title } = Typography;
@@ -53,6 +54,37 @@ const statusLabels: Record<string, string> = {
   CANCELLED: 'Đã hủy',
 };
 
+// Helper: convert tree to Cascader options
+const treeToCascaderOptions = (tree: any[]): any[] => {
+  return tree.map(node => ({
+    value: node.id,
+    label: node.name,
+    children: node.children?.length > 0 ? treeToCascaderOptions(node.children) : undefined,
+  }));
+};
+
+// Helper: find path in tree by ID
+const findPathInTree = (tree: any[], targetId: string, path: string[] = []): string[] | null => {
+  for (const node of tree) {
+    const currentPath = [...path, node.id];
+    if (node.id === targetId) return currentPath;
+    if (node.children?.length > 0) {
+      const found = findPathInTree(node.children, targetId, currentPath);
+      if (found) return found;
+    }
+  }
+  return null;
+};
+
+interface AvailableStock {
+  sampleId: string;
+  sampleCode: string;
+  varietyName: string;
+  localName: string;
+  availableQuantity: number;
+  unit: string;
+}
+
 export default function TransfersPage() {
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<WarehouseTransfer[]>([]);
@@ -65,25 +97,71 @@ export default function TransfersPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState<WarehouseTransfer | null>(null);
+  const [submitting, setSubmitting] = useState(false);
   const [form] = Form.useForm();
 
   // Dropdown data
   const [warehouses, setWarehouses] = useState<any[]>([]);
-  const [samples, setSamples] = useState<any[]>([]);
-  const [items, setItems] = useState<any[]>([{ sampleId: '', quantity: 0, unit: 'g' }]);
+  const [fromLocationOptions, setFromLocationOptions] = useState<any[]>([]);
+  const [toLocationOptions, setToLocationOptions] = useState<any[]>([]);
+  // Available stock in source warehouse
+  const [availableStocks, setAvailableStocks] = useState<AvailableStock[]>([]);
+  // Map of sampleId -> availableQuantity for quick lookup
+  const [stockMap, setStockMap] = useState<Record<string, number>>({});
 
-  const loadDropdownData = async () => {
+  const loadWarehouses = async () => {
     try {
-      const [warehousesRes, samplesRes] = await Promise.all([
-        warehousesService.getAll({ page: 1, limit: 500 }),
-        samplesService.getAll({ page: 1, limit: 500 }),
-      ]);
-      setWarehouses(warehousesRes.data || []);
-      setSamples(samplesRes.data || []);
+      const res = await warehousesService.getAll({ page: 1, limit: 500 });
+      setWarehouses(res.data || []);
     } catch (error) {
-      console.error('Error loading dropdown data:', error);
+      console.error('Error loading warehouses:', error);
     }
   };
+
+  const loadFromLocations = async (warehouseId?: string) => {
+    if (!warehouseId) {
+      setFromLocationOptions([]);
+      return;
+    }
+    try {
+      const tree = await storageLocationsService.getTree(warehouseId);
+      setFromLocationOptions(treeToCascaderOptions(tree || []));
+    } catch (error) {
+      console.error('Error loading source locations:', error);
+    }
+  };
+
+  const loadToLocations = async (warehouseId?: string) => {
+    if (!warehouseId) {
+      setToLocationOptions([]);
+      return;
+    }
+    try {
+      const tree = await storageLocationsService.getTree(warehouseId);
+      setToLocationOptions(treeToCascaderOptions(tree || []));
+    } catch (error) {
+      console.error('Error loading dest locations:', error);
+    }
+  };
+
+  const loadAvailableStock = useCallback(async (warehouseId?: string) => {
+    if (!warehouseId) {
+      setAvailableStocks([]);
+      setStockMap({});
+      return;
+    }
+    try {
+      const stocks = await inventoryService.getAvailableStockByWarehouse(warehouseId);
+      setAvailableStocks(stocks || []);
+      const map: Record<string, number> = {};
+      for (const s of stocks || []) {
+        map[s.sampleId] = s.availableQuantity;
+      }
+      setStockMap(map);
+    } catch (error) {
+      console.error('Error loading stock:', error);
+    }
+  }, []);
 
   const fetchData = async () => {
     setLoading(true);
@@ -106,29 +184,55 @@ export default function TransfersPage() {
 
   useEffect(() => {
     fetchData();
-    loadDropdownData();
+    loadWarehouses();
   }, [page, limit, search, statusFilter]);
+
+  const handleFromWarehouseChange = (warehouseId: string) => {
+    loadFromLocations(warehouseId);
+    loadAvailableStock(warehouseId);
+    // Reset items when source warehouse changes
+    form.setFieldsValue({ items: [{}] });
+  };
+
+  const handleToWarehouseChange = (warehouseId: string) => {
+    loadToLocations(warehouseId);
+  };
 
   const handleCreate = () => {
     form.resetFields();
     setSelectedRecord(null);
-    setItems([{ sampleId: '', quantity: 0, unit: 'g' }]);
+    setFromLocationOptions([]);
+    setToLocationOptions([]);
+    setAvailableStocks([]);
+    setStockMap({});
     setIsModalOpen(true);
   };
 
-  const handleEdit = (record: WarehouseTransfer) => {
+  const handleEdit = async (record: WarehouseTransfer) => {
     setSelectedRecord(record);
+
+    // Load locations and stock for the warehouses
+    const [fromTree, toTree] = await Promise.all([
+      storageLocationsService.getTree(record.fromWarehouseId).catch(() => []),
+      storageLocationsService.getTree(record.toWarehouseId).catch(() => []),
+    ]);
+    setFromLocationOptions(treeToCascaderOptions(fromTree || []));
+    setToLocationOptions(treeToCascaderOptions(toTree || []));
+    await loadAvailableStock(record.fromWarehouseId);
+
     form.setFieldsValue({
       fromWarehouseId: record.fromWarehouseId,
       toWarehouseId: record.toWarehouseId,
       transferDate: record.transferDate ? dayjs(record.transferDate) : undefined,
       notes: record.notes,
+      items: record.items?.map((i: any) => ({
+        sampleId: i.sampleId,
+        fromLocationPath: i.fromLocationId ? findPathInTree(fromTree || [], i.fromLocationId) : undefined,
+        toLocationPath: i.toLocationId ? findPathInTree(toTree || [], i.toLocationId) : undefined,
+        quantity: i.quantity,
+        unit: i.unit || 'g',
+      })) || [{}],
     });
-    setItems(record.items?.length ? record.items.map(i => ({
-      sampleId: i.sampleId,
-      quantity: i.quantity,
-      unit: i.unit || 'g',
-    })) : [{ sampleId: '', quantity: 0, unit: 'g' }]);
     setIsModalOpen(true);
   };
 
@@ -162,11 +266,19 @@ export default function TransfersPage() {
   };
 
   const handleSubmit = async (values: any) => {
+    setSubmitting(true);
     try {
-      const validItems = items.filter(i => i.sampleId && i.quantity > 0);
-      if (validItems.length === 0) {
-        message.error('Vui lòng thêm ít nhất một mẫu');
-        return;
+      // Frontend validation: check quantities
+      for (const item of values.items || []) {
+        if (!item?.sampleId) continue;
+        const available = stockMap[item.sampleId] ?? 0;
+        if (item.quantity > available) {
+          const stock = availableStocks.find(s => s.sampleId === item.sampleId);
+          const name = stock ? (stock.sampleCode || stock.varietyName) : item.sampleId;
+          message.error(`Mẫu "${name}" chỉ còn tồn kho ${available}, không thể chuyển ${item.quantity}`);
+          setSubmitting(false);
+          return;
+        }
       }
 
       const payload = {
@@ -174,8 +286,26 @@ export default function TransfersPage() {
         toWarehouseId: values.toWarehouseId,
         transferDate: values.transferDate?.format('YYYY-MM-DD'),
         notes: values.notes,
-        items: validItems,
+        items: (values.items || [])
+          .filter((item: any) => item?.sampleId && item?.quantity > 0)
+          .map((item: any) => ({
+            sampleId: item.sampleId,
+            fromLocationId: Array.isArray(item.fromLocationPath)
+              ? item.fromLocationPath[item.fromLocationPath.length - 1]
+              : item.fromLocationPath || null,
+            toLocationId: Array.isArray(item.toLocationPath)
+              ? item.toLocationPath[item.toLocationPath.length - 1]
+              : item.toLocationPath || null,
+            quantity: item.quantity,
+            unit: item.unit || 'g',
+          })),
       };
+
+      if (payload.items.length === 0) {
+        message.error('Vui lòng thêm ít nhất một mẫu');
+        setSubmitting(false);
+        return;
+      }
 
       if (selectedRecord) {
         await transfersService.update(selectedRecord.id, payload);
@@ -189,6 +319,8 @@ export default function TransfersPage() {
     } catch (error: any) {
       console.error('Submit error:', error);
       message.error(error.response?.data?.message || 'Thao tác thất bại');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -247,22 +379,6 @@ export default function TransfersPage() {
         }
       },
     });
-  };
-
-  const addItem = () => {
-    setItems([...items, { sampleId: '', quantity: 0, unit: 'g' }]);
-  };
-
-  const removeItem = (index: number) => {
-    if (items.length > 1) {
-      setItems(items.filter((_, i) => i !== index));
-    }
-  };
-
-  const updateItem = (index: number, field: string, value: any) => {
-    const newItems = [...items];
-    newItems[index] = { ...newItems[index], [field]: value };
-    setItems(newItems);
   };
 
   const columns = [
@@ -392,17 +508,27 @@ export default function TransfersPage() {
       <Modal
         title={selectedRecord ? 'Cập nhật phiếu chuyển kho' : 'Tạo phiếu chuyển kho'}
         open={isModalOpen}
-        onCancel={() => setIsModalOpen(false)}
-        footer={null}
-        width={800}
+        onCancel={() => {
+          form.resetFields();
+          setFromLocationOptions([]);
+          setToLocationOptions([]);
+          setAvailableStocks([]);
+          setStockMap({});
+          setIsModalOpen(false);
+        }}
+        onOk={() => form.submit()}
+        confirmLoading={submitting}
+        width={1000}
+        destroyOnClose
       >
-        <Form form={form} layout="vertical" onFinish={handleSubmit}>
+        <Form form={form} layout="vertical" onFinish={handleSubmit} initialValues={{ items: [{}] }}>
           <div style={{ display: 'flex', gap: 16 }}>
             <Form.Item name="fromWarehouseId" label="Kho nguồn" style={{ flex: 1 }} rules={[{ required: true, message: 'Vui lòng chọn kho nguồn' }]}>
               <Select
                 placeholder="Chọn kho nguồn"
                 showSearch
                 optionFilterProp="children"
+                onChange={handleFromWarehouseChange}
               >
                 {warehouses.map(w => (
                   <Select.Option key={w.id} value={w.id}>{w.name}</Select.Option>
@@ -414,6 +540,7 @@ export default function TransfersPage() {
                 placeholder="Chọn kho đích"
                 showSearch
                 optionFilterProp="children"
+                onChange={handleToWarehouseChange}
               >
                 {warehouses.map(w => (
                   <Select.Option key={w.id} value={w.id}>{w.name}</Select.Option>
@@ -421,60 +548,177 @@ export default function TransfersPage() {
               </Select>
             </Form.Item>
           </div>
-          <Form.Item name="transferDate" label="Ngày chuyển" rules={[{ required: true }]}>
+          <Form.Item name="transferDate" label="Ngày chuyển" rules={[{ required: true, message: 'Vui lòng chọn ngày chuyển' }]}>
             <DatePicker style={{ width: '100%' }} format="DD/MM/YYYY" />
           </Form.Item>
 
           <Divider>Danh sách mẫu chuyển</Divider>
-          {items.map((item, index) => (
-            <div key={index} style={{ display: 'flex', gap: 8, marginBottom: 8, alignItems: 'center' }}>
-              <Select
-                placeholder="Chọn mẫu"
-                style={{ flex: 2 }}
-                showSearch
-                optionFilterProp="children"
-                value={item.sampleId || undefined}
-                onChange={(value) => updateItem(index, 'sampleId', value)}
-              >
-                {samples.map(s => (
-                  <Select.Option key={s.id} value={s.id}>
-                    {s.code} - {s.varietyName || s.localName}
-                  </Select.Option>
-                ))}
-              </Select>
-              <InputNumber
-                placeholder="Số lượng"
-                style={{ flex: 1 }}
-                min={0}
-                value={item.quantity}
-                onChange={(value) => updateItem(index, 'quantity', value)}
-              />
-              <Select
-                style={{ width: 100 }}
-                value={item.unit}
-                onChange={(value) => updateItem(index, 'unit', value)}
-              >
-                <Select.Option value="g">Gram</Select.Option>
-                <Select.Option value="kg">Kg</Select.Option>
-                <Select.Option value="hat">Hạt</Select.Option>
-              </Select>
-              <Button type="text" danger icon={<DeleteOutlined />} onClick={() => removeItem(index)} />
-            </div>
-          ))}
-          <Button type="dashed" onClick={addItem} block icon={<PlusOutlined />} style={{ marginBottom: 16 }}>
-            Thêm mẫu
-          </Button>
+
+          {availableStocks.length > 0 && (
+            <Alert
+              type="info"
+              showIcon
+              style={{ marginBottom: 16 }}
+              message={`Kho nguồn có ${availableStocks.length} mẫu có tồn kho. Chọn mẫu từ danh sách bên dưới.`}
+            />
+          )}
+
+          <Form.List name="items">
+            {(fields, { add, remove }) => (
+              <>
+                {/* Header row */}
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: '2fr 2fr 2fr 1fr 100px auto',
+                    gap: 8,
+                    marginBottom: 8,
+                    fontWeight: 600,
+                    fontSize: 13,
+                    color: '#666',
+                  }}
+                >
+                  <div>Mẫu giống *</div>
+                  <div>Vị trí nguồn</div>
+                  <div>Vị trí đích</div>
+                  <div>Số lượng *</div>
+                  <div>Đơn vị</div>
+                  <div></div>
+                </div>
+
+                {fields.map(({ key, name, ...restField }) => {
+                  // Get current sampleId to show available stock
+                  const currentSampleId = form.getFieldValue(['items', name, 'sampleId']);
+                  const available = currentSampleId ? (stockMap[currentSampleId] ?? 0) : null;
+
+                  return (
+                    <div key={key}>
+                      <div
+                        style={{
+                          display: 'grid',
+                          gridTemplateColumns: '2fr 2fr 2fr 1fr 100px auto',
+                          gap: 8,
+                          marginBottom: 4,
+                        }}
+                      >
+                        <Form.Item
+                          {...restField}
+                          name={[name, 'sampleId']}
+                          rules={[{ required: true, message: 'Chọn mẫu' }]}
+                          style={{ marginBottom: 0 }}
+                        >
+                          <Select
+                            placeholder="Chọn mẫu"
+                            showSearch
+                            optionFilterProp="children"
+                            onChange={() => {
+                              // Force re-render to update available stock display
+                              form.setFieldValue(['items', name, 'quantity'], undefined);
+                            }}
+                          >
+                            {availableStocks.length > 0
+                              ? availableStocks.map(s => (
+                                  <Select.Option key={s.sampleId} value={s.sampleId}>
+                                    {s.sampleCode} - {s.varietyName || s.localName} (Tồn: {s.availableQuantity})
+                                  </Select.Option>
+                                ))
+                              : <Select.Option disabled value="">Chọn kho nguồn trước</Select.Option>
+                            }
+                          </Select>
+                        </Form.Item>
+
+                        <Form.Item {...restField} name={[name, 'fromLocationPath']} style={{ marginBottom: 0 }}>
+                          <Cascader
+                            options={fromLocationOptions}
+                            placeholder="Vị trí nguồn"
+                            changeOnSelect
+                            expandTrigger="hover"
+                            showSearch={{
+                              filter: (input: string, path: any[]) =>
+                                path.some(opt => (opt.label as string).toLowerCase().includes(input.toLowerCase())),
+                            }}
+                          />
+                        </Form.Item>
+
+                        <Form.Item {...restField} name={[name, 'toLocationPath']} style={{ marginBottom: 0 }}>
+                          <Cascader
+                            options={toLocationOptions}
+                            placeholder="Vị trí đích"
+                            changeOnSelect
+                            expandTrigger="hover"
+                            showSearch={{
+                              filter: (input: string, path: any[]) =>
+                                path.some(opt => (opt.label as string).toLowerCase().includes(input.toLowerCase())),
+                            }}
+                          />
+                        </Form.Item>
+
+                        <Form.Item
+                          {...restField}
+                          name={[name, 'quantity']}
+                          rules={[
+                            { required: true, message: 'Nhập SL' },
+                            {
+                              validator: (_, value) => {
+                                const sampleId = form.getFieldValue(['items', name, 'sampleId']);
+                                if (!sampleId || !value) return Promise.resolve();
+                                const maxQty = stockMap[sampleId] ?? 0;
+                                if (value > maxQty) {
+                                  return Promise.reject(`Tối đa ${maxQty}`);
+                                }
+                                return Promise.resolve();
+                              },
+                            },
+                          ]}
+                          style={{ marginBottom: 0 }}
+                        >
+                          <InputNumber
+                            placeholder="Số lượng"
+                            min={0.01}
+                            max={available ?? undefined}
+                            style={{ width: '100%' }}
+                          />
+                        </Form.Item>
+
+                        <Form.Item {...restField} name={[name, 'unit']} initialValue="g" style={{ marginBottom: 0 }}>
+                          <Select>
+                            <Select.Option value="g">Gram</Select.Option>
+                            <Select.Option value="kg">Kg</Select.Option>
+                            <Select.Option value="hat">Hạt</Select.Option>
+                          </Select>
+                        </Form.Item>
+
+                        <Button
+                          type="text"
+                          danger
+                          icon={<MinusCircleOutlined />}
+                          onClick={() => remove(name)}
+                          style={{ marginTop: 4 }}
+                        />
+                      </div>
+                      {available !== null && available >= 0 && (
+                        <div style={{ fontSize: 12, color: '#1890ff', marginBottom: 8, paddingLeft: 4 }}>
+                          Tồn kho: <strong>{available}</strong>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+                <Button
+                  type="dashed"
+                  onClick={() => add()}
+                  block
+                  icon={<PlusOutlined />}
+                  style={{ marginBottom: 16 }}
+                >
+                  Thêm mẫu
+                </Button>
+              </>
+            )}
+          </Form.List>
 
           <Form.Item name="notes" label="Ghi chú">
             <TextArea rows={2} placeholder="Ghi chú..." />
-          </Form.Item>
-          <Form.Item style={{ marginBottom: 0, textAlign: 'right' }}>
-            <Space>
-              <Button onClick={() => setIsModalOpen(false)}>Hủy</Button>
-              <Button type="primary" htmlType="submit">
-                {selectedRecord ? 'Cập nhật' : 'Tạo mới'}
-              </Button>
-            </Space>
           </Form.Item>
         </Form>
       </Modal>
@@ -527,9 +771,18 @@ export default function TransfersPage() {
                 },
                 {
                   title: 'Tên giống',
-                  dataIndex: ['sample', 'varietyName'],
                   key: 'varietyName',
-                  render: (_, record: any) => record.sample?.varietyName || record.sample?.localName || '-',
+                  render: (_: any, record: any) => record.sample?.varietyName || record.sample?.localName || '-',
+                },
+                {
+                  title: 'Vị trí nguồn',
+                  key: 'fromLocation',
+                  render: (_: any, record: any) => record.fromLocation?.name || '-',
+                },
+                {
+                  title: 'Vị trí đích',
+                  key: 'toLocation',
+                  render: (_: any, record: any) => record.toLocation?.name || '-',
                 },
                 {
                   title: 'Số lượng',

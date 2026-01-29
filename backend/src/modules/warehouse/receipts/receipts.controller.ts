@@ -3,6 +3,7 @@ import {
   Get,
   Post,
   Put,
+  Patch,
   Delete,
   Body,
   Param,
@@ -52,6 +53,15 @@ export class ReceiptsController {
   @ApiOperation({ summary: 'Update receipt' })
   async update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: any) {
     return this.service.update(id, dto);
+  }
+
+  @Patch(':id/confirm')
+  @ApiOperation({ summary: 'Confirm receipt - creates IMPORT inventory transactions' })
+  async confirm(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser('id') userId: string,
+  ) {
+    return this.service.confirm(id, userId);
   }
 
   @Delete(':id')

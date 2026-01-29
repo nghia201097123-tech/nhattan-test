@@ -23,6 +23,23 @@ export class InventoryController {
     return this.service.findAll(query);
   }
 
+  @Get('available-stock')
+  @ApiOperation({ summary: 'Get available stock for a sample in a warehouse' })
+  async getAvailableStock(
+    @Query('warehouseId') warehouseId: string,
+    @Query('sampleId') sampleId: string,
+  ) {
+    return this.service.getAvailableStock(warehouseId, sampleId);
+  }
+
+  @Get('available-stock-by-warehouse/:warehouseId')
+  @ApiOperation({ summary: 'Get all available stock in a warehouse' })
+  async getAvailableStockByWarehouse(
+    @Param('warehouseId', ParseUUIDPipe) warehouseId: string,
+  ) {
+    return this.service.getAvailableStockByWarehouse(warehouseId);
+  }
+
   @Get('sample/:sampleId')
   @ApiOperation({ summary: 'Get stock summary by sample' })
   async getStockBySample(@Param('sampleId', ParseUUIDPipe) sampleId: string) {
