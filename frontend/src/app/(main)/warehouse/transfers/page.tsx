@@ -102,8 +102,7 @@ export default function TransfersPage() {
 
   // Dropdown data
   const [warehouses, setWarehouses] = useState<any[]>([]);
-  const [fromLocationOptions, setFromLocationOptions] = useState<any[]>([]);
-  const [toLocationOptions, setToLocationOptions] = useState<any[]>([]);
+  const [locationOptions, setLocationOptions] = useState<any[]>([]);
   // Available stock in source warehouse
   const [availableStocks, setAvailableStocks] = useState<AvailableStock[]>([]);
   // Map of sampleId -> availableQuantity for quick lookup
@@ -118,29 +117,16 @@ export default function TransfersPage() {
     }
   };
 
-  const loadFromLocations = async (warehouseId?: string) => {
+  const loadLocations = async (warehouseId?: string) => {
     if (!warehouseId) {
-      setFromLocationOptions([]);
+      setLocationOptions([]);
       return;
     }
     try {
       const tree = await storageLocationsService.getTree(warehouseId);
-      setFromLocationOptions(treeToCascaderOptions(tree || []));
+      setLocationOptions(treeToCascaderOptions(tree || []));
     } catch (error) {
-      console.error('Error loading source locations:', error);
-    }
-  };
-
-  const loadToLocations = async (warehouseId?: string) => {
-    if (!warehouseId) {
-      setToLocationOptions([]);
-      return;
-    }
-    try {
-      const tree = await storageLocationsService.getTree(warehouseId);
-      setToLocationOptions(treeToCascaderOptions(tree || []));
-    } catch (error) {
-      console.error('Error loading dest locations:', error);
+      console.error('Error loading locations:', error);
     }
   };
 
@@ -188,21 +174,19 @@ export default function TransfersPage() {
   }, [page, limit, search, statusFilter]);
 
   const handleFromWarehouseChange = (warehouseId: string) => {
-    loadFromLocations(warehouseId);
     loadAvailableStock(warehouseId);
     // Reset items when source warehouse changes
     form.setFieldsValue({ items: [{}] });
   };
 
   const handleToWarehouseChange = (warehouseId: string) => {
-    loadToLocations(warehouseId);
+    loadLocations(warehouseId);
   };
 
   const handleCreate = () => {
     form.resetFields();
     setSelectedRecord(null);
-    setFromLocationOptions([]);
-    setToLocationOptions([]);
+    setLocationOptions([]);
     setAvailableStocks([]);
     setStockMap({});
     setIsModalOpen(true);
@@ -211,13 +195,9 @@ export default function TransfersPage() {
   const handleEdit = async (record: WarehouseTransfer) => {
     setSelectedRecord(record);
 
-    // Load locations and stock for the warehouses
-    const [fromTree, toTree] = await Promise.all([
-      storageLocationsService.getTree(record.fromWarehouseId).catch(() => []),
-      storageLocationsService.getTree(record.toWarehouseId).catch(() => []),
-    ]);
-    setFromLocationOptions(treeToCascaderOptions(fromTree || []));
-    setToLocationOptions(treeToCascaderOptions(toTree || []));
+    // Load locations for destination warehouse and stock for source warehouse
+    const toTree = await storageLocationsService.getTree(record.toWarehouseId).catch(() => []);
+    setLocationOptions(treeToCascaderOptions(toTree || []));
     await loadAvailableStock(record.fromWarehouseId);
 
     form.setFieldsValue({
@@ -227,7 +207,6 @@ export default function TransfersPage() {
       notes: record.notes,
       items: record.items?.map((i: any) => ({
         sampleId: i.sampleId,
-        fromLocationPath: i.fromLocationId ? findPathInTree(fromTree || [], i.fromLocationId) : undefined,
         toLocationPath: i.toLocationId ? findPathInTree(toTree || [], i.toLocationId) : undefined,
         quantity: i.quantity,
         unit: i.unit || 'g',
@@ -290,9 +269,6 @@ export default function TransfersPage() {
           .filter((item: any) => item?.sampleId && item?.quantity > 0)
           .map((item: any) => ({
             sampleId: item.sampleId,
-            fromLocationId: Array.isArray(item.fromLocationPath)
-              ? item.fromLocationPath[item.fromLocationPath.length - 1]
-              : item.fromLocationPath || null,
             toLocationId: Array.isArray(item.toLocationPath)
               ? item.toLocationPath[item.toLocationPath.length - 1]
               : item.toLocationPath || null,
@@ -510,8 +486,7 @@ export default function TransfersPage() {
         open={isModalOpen}
         onCancel={() => {
           form.resetFields();
-          setFromLocationOptions([]);
-          setToLocationOptions([]);
+          setLocationOptions([]);
           setAvailableStocks([]);
           setStockMap({});
           setIsModalOpen(false);
@@ -570,7 +545,7 @@ export default function TransfersPage() {
                 <div
                   style={{
                     display: 'grid',
-                    gridTemplateColumns: '2fr 2fr 2fr 1fr 100px auto',
+                    gridTemplateColumns: '2fr 2fr 1fr 100px auto',
                     gap: 8,
                     marginBottom: 8,
                     fontWeight: 600,
@@ -579,8 +554,7 @@ export default function TransfersPage() {
                   }}
                 >
                   <div>Mẫu giống *</div>
-                  <div>Vị trí nguồn</div>
-                  <div>Vị trí đích</div>
+                  <div>Vị trí (kho đích)</div>
                   <div>Số lượng *</div>
                   <div>Đơn vị</div>
                   <div></div>
@@ -596,7 +570,7 @@ export default function TransfersPage() {
                       <div
                         style={{
                           display: 'grid',
-                          gridTemplateColumns: '2fr 2fr 2fr 1fr 100px auto',
+                          gridTemplateColumns: '2fr 2fr 1fr 100px auto',
                           gap: 8,
                           marginBottom: 4,
                         }}
@@ -627,23 +601,10 @@ export default function TransfersPage() {
                           </Select>
                         </Form.Item>
 
-                        <Form.Item {...restField} name={[name, 'fromLocationPath']} style={{ marginBottom: 0 }}>
-                          <Cascader
-                            options={fromLocationOptions}
-                            placeholder="Vị trí nguồn"
-                            changeOnSelect
-                            expandTrigger="hover"
-                            showSearch={{
-                              filter: (input: string, path: any[]) =>
-                                path.some(opt => (opt.label as string).toLowerCase().includes(input.toLowerCase())),
-                            }}
-                          />
-                        </Form.Item>
-
                         <Form.Item {...restField} name={[name, 'toLocationPath']} style={{ marginBottom: 0 }}>
                           <Cascader
-                            options={toLocationOptions}
-                            placeholder="Vị trí đích"
+                            options={locationOptions}
+                            placeholder="Chọn vị trí lưu trữ"
                             changeOnSelect
                             expandTrigger="hover"
                             showSearch={{
@@ -775,12 +736,7 @@ export default function TransfersPage() {
                   render: (_: any, record: any) => record.sample?.varietyName || record.sample?.localName || '-',
                 },
                 {
-                  title: 'Vị trí nguồn',
-                  key: 'fromLocation',
-                  render: (_: any, record: any) => record.fromLocation?.name || '-',
-                },
-                {
-                  title: 'Vị trí đích',
+                  title: 'Vị trí (kho đích)',
                   key: 'toLocation',
                   render: (_: any, record: any) => record.toLocation?.name || '-',
                 },

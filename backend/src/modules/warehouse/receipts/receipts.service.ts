@@ -195,6 +195,35 @@ export class ReceiptsService {
       throw new BadRequestException('Phiếu nhập phải có ít nhất 1 mẫu');
     }
 
+    // Validate: tổng nhập kho không được vượt initialQuantity của mẫu
+    for (const item of receipt.items) {
+      const sample = await this.sampleRepo.findOne({ where: { id: item.sampleId } });
+      if (!sample) {
+        throw new BadRequestException(`Không tìm thấy mẫu với ID: ${item.sampleId}`);
+      }
+
+      if (sample.initialQuantity != null) {
+        // Tính tổng đã nhập trước đó (từ các phiếu đã xác nhận)
+        const alreadyImported = await this.transactionRepo
+          .createQueryBuilder('tx')
+          .select('COALESCE(SUM(tx.quantity), 0)', 'total')
+          .where('tx.sampleId = :sampleId', { sampleId: item.sampleId })
+          .andWhere('tx.transactionType = :type', { type: TransactionType.IMPORT })
+          .getRawOne();
+
+        const totalImported = Number(alreadyImported?.total) || 0;
+        const remaining = Number(sample.initialQuantity) - totalImported;
+
+        if (Number(item.quantity) > remaining) {
+          throw new BadRequestException(
+            `Mẫu "${sample.code}" có số lượng thu thập ${sample.initialQuantity}, ` +
+            `đã nhập kho ${totalImported}, còn lại ${remaining}. ` +
+            `Không thể nhập thêm ${item.quantity}.`,
+          );
+        }
+      }
+    }
+
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
