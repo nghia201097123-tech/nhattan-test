@@ -522,7 +522,7 @@ export default function WarehouseExportsPage() {
                           <div
                             style={{
                               display: 'grid',
-                              gridTemplateColumns: '2fr 1fr auto',
+                              gridTemplateColumns: '2fr minmax(180px, 1.5fr) auto',
                               gap: 8,
                             }}
                           >

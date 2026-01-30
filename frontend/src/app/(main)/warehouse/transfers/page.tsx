@@ -562,7 +562,7 @@ export default function TransfersPage() {
                 <div
                   style={{
                     display: 'grid',
-                    gridTemplateColumns: '2fr 2fr 1fr auto',
+                    gridTemplateColumns: '2fr 2fr minmax(180px, 1.5fr) auto',
                     gap: 8,
                     marginBottom: 8,
                     fontWeight: 600,
@@ -596,7 +596,7 @@ export default function TransfersPage() {
                           <div
                             style={{
                               display: 'grid',
-                              gridTemplateColumns: '2fr 2fr 1fr auto',
+                              gridTemplateColumns: '2fr 2fr minmax(180px, 1.5fr) auto',
                               gap: 8,
                               marginBottom: 4,
                             }}
