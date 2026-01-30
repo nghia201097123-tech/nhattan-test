@@ -666,7 +666,6 @@ export default function TransfersPage() {
                               <InputNumber
                                 placeholder="Số lượng"
                                 min={0.01}
-                                max={available ?? undefined}
                                 style={{ width: '100%' }}
                                 addonAfter={unitLabel || 'ĐV'}
                               />

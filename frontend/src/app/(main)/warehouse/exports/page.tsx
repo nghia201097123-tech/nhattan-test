@@ -573,7 +573,6 @@ export default function WarehouseExportsPage() {
                               <InputNumber
                                 placeholder="Số lượng"
                                 min={0}
-                                max={maxStock}
                                 style={{ width: '100%' }}
                                 addonAfter={unitLabel || 'ĐV'}
                               />

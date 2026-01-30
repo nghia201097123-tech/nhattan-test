@@ -548,7 +548,6 @@ export default function WarehouseReceiptsPage() {
                               <InputNumber
                                 placeholder="Số lượng"
                                 min={0}
-                                max={maxQuantity}
                                 style={{ width: '100%' }}
                                 addonAfter={unitLabel || 'ĐV'}
                               />

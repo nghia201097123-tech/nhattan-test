@@ -111,32 +111,39 @@ export class ReceiptsService {
   }
 
   // Validate số lượng nhập kho không vượt quá số lượng thu thập của mẫu
-  private async validateItemQuantities(items: Array<{ sampleId: string; quantity: number; unit?: string }>): Promise<void> {
+  // Tính tổng từ tất cả phiếu chưa hủy (DRAFT + CONFIRMED) thay vì chỉ confirmed
+  private async validateItemQuantities(
+    items: Array<{ sampleId: string; quantity: number; unit?: string }>,
+    excludeReceiptId?: string,
+  ): Promise<void> {
     for (const itemDto of items) {
       const sample = await this.sampleRepo.findOne({ where: { id: itemDto.sampleId } });
-      if (!sample) continue;
+      if (!sample || sample.initialQuantity == null) continue;
 
-      if (sample.initialQuantity != null) {
-        const sampleUnit = this.normalizeUnit(sample.quantityUnit || 'gram');
+      const sampleUnit = this.normalizeUnit(sample.quantityUnit || 'gram');
 
-        // Tính tổng đã nhập trước đó (từ các phiếu đã xác nhận)
-        const alreadyImported = await this.transactionRepo
-          .createQueryBuilder('tx')
-          .select('COALESCE(SUM(tx.quantity), 0)', 'total')
-          .where('tx.sampleId = :sampleId', { sampleId: itemDto.sampleId })
-          .andWhere('tx.transactionType = :type', { type: TransactionType.IMPORT })
-          .getRawOne();
+      // 1 query duy nhất: tổng SL từ tất cả phiếu nhập chưa hủy (DRAFT + CONFIRMED)
+      const query = this.itemRepository
+        .createQueryBuilder('item')
+        .innerJoin(WarehouseReceipt, 'receipt', 'receipt.id = item.receiptId')
+        .select('COALESCE(SUM(item.quantity), 0)', 'total')
+        .where('item.sampleId = :sampleId', { sampleId: itemDto.sampleId })
+        .andWhere('receipt.status != :cancelled', { cancelled: ReceiptStatus.CANCELLED });
 
-        const totalImported = Number(alreadyImported?.total) || 0;
-        const remaining = Number(sample.initialQuantity) - totalImported;
+      if (excludeReceiptId) {
+        query.andWhere('receipt.id != :excludeId', { excludeId: excludeReceiptId });
+      }
 
-        if (Number(itemDto.quantity) > remaining) {
-          throw new BadRequestException(
-            `Mẫu "${sample.code}" có số lượng thu thập ${sample.initialQuantity} ${this.unitLabel(sampleUnit)}, ` +
-            `đã nhập kho ${totalImported}, còn lại ${remaining}. ` +
-            `Không thể nhập ${itemDto.quantity}.`,
-          );
-        }
+      const result = await query.getRawOne();
+      const totalAllocated = Number(result?.total) || 0;
+      const remaining = Number(sample.initialQuantity) - totalAllocated;
+
+      if (Number(itemDto.quantity) > remaining) {
+        throw new BadRequestException(
+          `Mẫu "${sample.code}" có SL thu thập ${sample.initialQuantity} ${this.unitLabel(sampleUnit)}, ` +
+          `đã phân bổ ${totalAllocated}, còn lại ${remaining}. ` +
+          `Không thể nhập ${itemDto.quantity}.`,
+        );
       }
     }
   }
@@ -199,7 +206,7 @@ export class ReceiptsService {
     // Validate đơn vị và số lượng phải khớp với mẫu
     if (dto.items && dto.items.length > 0) {
       await this.validateItemUnits(dto.items);
-      await this.validateItemQuantities(dto.items);
+      await this.validateItemQuantities(dto.items, id);
     }
 
     const queryRunner = this.dataSource.createQueryRunner();
