@@ -70,7 +70,52 @@ export class ReceiptsService {
     return generateCode('PN', lastReceipt?.receiptNumber);
   }
 
+  // Chuẩn hóa đơn vị: 'g' -> 'gram', 'hạt' -> 'hat'
+  private normalizeUnit(unit: string): string {
+    if (!unit) return 'gram';
+    const lower = unit.toLowerCase().trim();
+    if (lower === 'g' || lower === 'gram') return 'gram';
+    if (lower === 'kg' || lower === 'kilogram') return 'kg';
+    if (lower === 'hat' || lower === 'hạt') return 'hat';
+    return lower;
+  }
+
+  // Hiển thị tên đơn vị
+  private unitLabel(unit: string): string {
+    const normalized = this.normalizeUnit(unit);
+    if (normalized === 'gram') return 'gram';
+    if (normalized === 'kg') return 'kg';
+    if (normalized === 'hat') return 'hạt';
+    return unit;
+  }
+
+  // Validate đơn vị của item phải khớp với đơn vị thu thập của mẫu
+  private async validateItemUnits(items: Array<{ sampleId: string; unit?: string }>): Promise<void> {
+    for (const itemDto of items) {
+      const sample = await this.sampleRepo.findOne({ where: { id: itemDto.sampleId } });
+      if (!sample) {
+        throw new BadRequestException(`Không tìm thấy mẫu với ID: ${itemDto.sampleId}`);
+      }
+
+      const itemUnit = this.normalizeUnit(itemDto.unit || 'gram');
+      const sampleUnit = this.normalizeUnit(sample.quantityUnit || 'gram');
+
+      if (itemUnit !== sampleUnit) {
+        throw new BadRequestException(
+          `Mẫu "${sample.code}" có đơn vị thu thập là "${this.unitLabel(sampleUnit)}". ` +
+          `Đơn vị nhập kho phải cùng đơn vị "${this.unitLabel(sampleUnit)}", ` +
+          `không thể dùng "${this.unitLabel(itemUnit)}".`,
+        );
+      }
+    }
+  }
+
   async create(dto: any, userId: string): Promise<WarehouseReceipt> {
+    // Validate đơn vị phải khớp với mẫu
+    if (dto.items && dto.items.length > 0) {
+      await this.validateItemUnits(dto.items);
+    }
+
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
@@ -101,7 +146,7 @@ export class ReceiptsService {
             sampleId: itemDto.sampleId,
             locationId: itemDto.locationId || null,
             quantity: itemDto.quantity,
-            unit: itemDto.unit || 'g',
+            unit: this.normalizeUnit(itemDto.unit || 'gram'),
             notes: itemDto.notes,
           });
           await queryRunner.manager.save(item);
@@ -119,6 +164,11 @@ export class ReceiptsService {
   }
 
   async update(id: string, dto: any): Promise<WarehouseReceipt> {
+    // Validate đơn vị phải khớp với mẫu
+    if (dto.items && dto.items.length > 0) {
+      await this.validateItemUnits(dto.items);
+    }
+
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
@@ -145,7 +195,7 @@ export class ReceiptsService {
             sampleId: itemDto.sampleId,
             locationId: itemDto.locationId || null,
             quantity: itemDto.quantity,
-            unit: itemDto.unit || 'g',
+            unit: this.normalizeUnit(itemDto.unit || 'gram'),
             notes: itemDto.notes,
           });
           await queryRunner.manager.save(item);
@@ -197,11 +247,22 @@ export class ReceiptsService {
       throw new BadRequestException('Phiếu nhập phải có ít nhất 1 mẫu');
     }
 
-    // Validate: tổng nhập kho không được vượt initialQuantity của mẫu
+    // Validate: đơn vị phải khớp + tổng nhập kho không được vượt initialQuantity của mẫu
     for (const item of receipt.items) {
       const sample = await this.sampleRepo.findOne({ where: { id: item.sampleId } });
       if (!sample) {
         throw new BadRequestException(`Không tìm thấy mẫu với ID: ${item.sampleId}`);
+      }
+
+      // Validate đơn vị phải cùng đơn vị với mẫu thu thập
+      const itemUnit = this.normalizeUnit(item.unit || 'gram');
+      const sampleUnit = this.normalizeUnit(sample.quantityUnit || 'gram');
+      if (itemUnit !== sampleUnit) {
+        throw new BadRequestException(
+          `Mẫu "${sample.code}" có đơn vị thu thập là "${this.unitLabel(sampleUnit)}". ` +
+          `Đơn vị nhập kho phải cùng đơn vị "${this.unitLabel(sampleUnit)}", ` +
+          `không thể dùng "${this.unitLabel(itemUnit)}".`,
+        );
       }
 
       if (sample.initialQuantity != null) {
@@ -218,7 +279,7 @@ export class ReceiptsService {
 
         if (Number(item.quantity) > remaining) {
           throw new BadRequestException(
-            `Mẫu "${sample.code}" có số lượng thu thập ${sample.initialQuantity}, ` +
+            `Mẫu "${sample.code}" có số lượng thu thập ${sample.initialQuantity} ${this.unitLabel(sampleUnit)}, ` +
             `đã nhập kho ${totalImported}, còn lại ${remaining}. ` +
             `Không thể nhập thêm ${item.quantity}.`,
           );
@@ -245,7 +306,7 @@ export class ReceiptsService {
           locationId: item.locationId || null,
           transactionType: TransactionType.IMPORT,
           quantity: item.quantity,
-          unit: item.unit || 'g',
+          unit: this.normalizeUnit(item.unit || 'gram'),
           referenceType: ReferenceType.RECEIPT,
           referenceId: receipt.id,
           referenceNumber: receipt.receiptNumber,

@@ -1,7 +1,9 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, DataSource } from 'typeorm';
 import { WarehouseExport } from './entities/warehouse-export.entity';
+import { WarehouseExportItem } from './entities/warehouse-export-item.entity';
+import { Sample } from '../../samples/collection/entities/sample.entity';
 import { PaginationDto, createPaginatedResult } from '../../../common/dto/pagination.dto';
 import { generateCode } from '../../../common/utils/code-generator.util';
 import { ExportStatus, canTransition } from '../../../shared/constants/export-status.constant';
@@ -11,7 +13,52 @@ export class ExportsService {
   constructor(
     @InjectRepository(WarehouseExport)
     private readonly repository: Repository<WarehouseExport>,
+    @InjectRepository(WarehouseExportItem)
+    private readonly itemRepository: Repository<WarehouseExportItem>,
+    @InjectRepository(Sample)
+    private readonly sampleRepo: Repository<Sample>,
+    private readonly dataSource: DataSource,
   ) {}
+
+  // Chuẩn hóa đơn vị: 'g' -> 'gram', 'hạt' -> 'hat'
+  private normalizeUnit(unit: string): string {
+    if (!unit) return 'gram';
+    const lower = unit.toLowerCase().trim();
+    if (lower === 'g' || lower === 'gram') return 'gram';
+    if (lower === 'kg' || lower === 'kilogram') return 'kg';
+    if (lower === 'hat' || lower === 'hạt') return 'hat';
+    return lower;
+  }
+
+  // Hiển thị tên đơn vị
+  private unitLabel(unit: string): string {
+    const normalized = this.normalizeUnit(unit);
+    if (normalized === 'gram') return 'gram';
+    if (normalized === 'kg') return 'kg';
+    if (normalized === 'hat') return 'hạt';
+    return unit;
+  }
+
+  // Validate đơn vị của item phải khớp với đơn vị thu thập của mẫu
+  private async validateItemUnits(items: Array<{ sampleId: string; unit?: string }>): Promise<void> {
+    for (const itemDto of items) {
+      const sample = await this.sampleRepo.findOne({ where: { id: itemDto.sampleId } });
+      if (!sample) {
+        throw new BadRequestException(`Không tìm thấy mẫu với ID: ${itemDto.sampleId}`);
+      }
+
+      const itemUnit = this.normalizeUnit(itemDto.unit || 'gram');
+      const sampleUnit = this.normalizeUnit(sample.quantityUnit || 'gram');
+
+      if (itemUnit !== sampleUnit) {
+        throw new BadRequestException(
+          `Mẫu "${sample.code}" có đơn vị thu thập là "${this.unitLabel(sampleUnit)}". ` +
+          `Đơn vị xuất kho phải cùng đơn vị "${this.unitLabel(sampleUnit)}", ` +
+          `không thể dùng "${this.unitLabel(itemUnit)}".`,
+        );
+      }
+    }
+  }
 
   async findAll(query: PaginationDto & { status?: ExportStatus }) {
     const { page, limit, sortBy, sortOrder, search, status } = query;
@@ -65,20 +112,57 @@ export class ExportsService {
   }
 
   async create(dto: any, userId: string): Promise<WarehouseExport> {
-    const exportNumber = await this.generateCode();
+    // Validate đơn vị phải khớp với mẫu
+    if (dto.items && dto.items.length > 0) {
+      await this.validateItemUnits(dto.items);
+    }
 
-    const exportRecord = this.repository.create({
-      exportNumber,
-      warehouseId: dto.warehouseId,
-      exportDate: dto.exportDate || new Date(),
-      recipientName: dto.recipientName,
-      recipientAddress: dto.recipientAddress,
-      notes: dto.notes,
-      status: ExportStatus.DRAFT,
-      createdBy: userId,
-    });
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
 
-    return this.repository.save(exportRecord);
+    try {
+      const exportNumber = await this.generateCode();
+
+      const exportRecord = this.repository.create({
+        exportNumber,
+        warehouseId: dto.warehouseId,
+        exportDate: dto.exportDate || new Date(),
+        reasonId: dto.reasonId,
+        recipientName: dto.recipientName,
+        recipientAddress: dto.recipientAddress,
+        recipientContact: dto.recipientContact,
+        notes: dto.notes,
+        status: ExportStatus.DRAFT,
+        createdBy: userId,
+        totalItems: dto.items?.length || 0,
+      });
+
+      const savedExport = await queryRunner.manager.save(exportRecord);
+
+      // Create items
+      if (dto.items && dto.items.length > 0) {
+        for (const itemDto of dto.items) {
+          const item = this.itemRepository.create({
+            exportId: savedExport.id,
+            sampleId: itemDto.sampleId,
+            locationId: itemDto.locationId || null,
+            quantity: itemDto.quantity,
+            unit: this.normalizeUnit(itemDto.unit || 'gram'),
+            notes: itemDto.notes,
+          });
+          await queryRunner.manager.save(item);
+        }
+      }
+
+      await queryRunner.commitTransaction();
+      return this.findById(savedExport.id);
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      await queryRunner.release();
+    }
   }
 
   async update(id: string, dto: any): Promise<WarehouseExport> {
@@ -86,8 +170,58 @@ export class ExportsService {
     if (exportRecord.status !== ExportStatus.DRAFT) {
       throw new BadRequestException('Can only update draft exports');
     }
-    Object.assign(exportRecord, dto);
-    return this.repository.save(exportRecord);
+
+    // Validate đơn vị phải khớp với mẫu
+    if (dto.items && dto.items.length > 0) {
+      await this.validateItemUnits(dto.items);
+    }
+
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      // Update header fields
+      exportRecord.warehouseId = dto.warehouseId ?? exportRecord.warehouseId;
+      exportRecord.exportDate = dto.exportDate ?? exportRecord.exportDate;
+      exportRecord.reasonId = dto.reasonId ?? exportRecord.reasonId;
+      exportRecord.recipientName = dto.recipientName ?? exportRecord.recipientName;
+      exportRecord.recipientAddress = dto.recipientAddress ?? exportRecord.recipientAddress;
+      exportRecord.recipientContact = dto.recipientContact ?? exportRecord.recipientContact;
+      exportRecord.notes = dto.notes ?? exportRecord.notes;
+
+      if (dto.items) {
+        // Delete old items
+        await queryRunner.manager.delete(WarehouseExportItem, { exportId: id });
+
+        // Create new items
+        for (const itemDto of dto.items) {
+          const item = this.itemRepository.create({
+            exportId: id,
+            sampleId: itemDto.sampleId,
+            locationId: itemDto.locationId || null,
+            quantity: itemDto.quantity,
+            unit: this.normalizeUnit(itemDto.unit || 'gram'),
+            notes: itemDto.notes,
+          });
+          await queryRunner.manager.save(item);
+        }
+
+        exportRecord.totalItems = dto.items.length;
+      }
+
+      // Clear items to prevent cascade issues
+      delete (exportRecord as any).items;
+      await queryRunner.manager.save(exportRecord);
+      await queryRunner.commitTransaction();
+
+      return this.findById(id);
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      await queryRunner.release();
+    }
   }
 
   async submitForApproval(id: string, userId: string): Promise<WarehouseExport> {

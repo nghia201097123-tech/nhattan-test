@@ -212,9 +212,11 @@ export class InventoryService {
         `SUM(CASE WHEN tx.transactionType IN ('EXPORT', 'TRANSFER_OUT') THEN ABS(tx.quantity) ELSE 0 END)`,
         'totalOut',
       )
-      .addSelect('MAX(tx.unit)', 'unit')
+      .addSelect('sample.quantityUnit', 'unit')
+      .leftJoin('tx.sample', 'sample')
       .where('tx.warehouseId = :warehouseId', { warehouseId })
       .andWhere('tx.sampleId = :sampleId', { sampleId })
+      .groupBy('sample.quantityUnit')
       .getRawOne();
 
     const totalIn = Number(result?.totalIn) || 0;
@@ -224,7 +226,7 @@ export class InventoryService {
       sampleId,
       warehouseId,
       availableQuantity: totalIn - totalOut,
-      unit: result?.unit || 'g',
+      unit: result?.unit || 'gram',
     };
   }
 
@@ -243,6 +245,7 @@ export class InventoryService {
       .addSelect('sample.code', 'sampleCode')
       .addSelect('sample.varietyName', 'varietyName')
       .addSelect('sample.localName', 'localName')
+      .addSelect('sample.quantityUnit', 'unit')
       .addSelect(
         `SUM(CASE WHEN tx.transactionType IN ('IMPORT', 'TRANSFER_IN') THEN tx.quantity ELSE 0 END)`,
         'totalIn',
@@ -251,13 +254,13 @@ export class InventoryService {
         `SUM(CASE WHEN tx.transactionType IN ('EXPORT', 'TRANSFER_OUT') THEN ABS(tx.quantity) ELSE 0 END)`,
         'totalOut',
       )
-      .addSelect('MAX(tx.unit)', 'unit')
       .leftJoin('tx.sample', 'sample')
       .where('tx.warehouseId = :warehouseId', { warehouseId })
       .groupBy('tx.sampleId')
       .addGroupBy('sample.code')
       .addGroupBy('sample.varietyName')
       .addGroupBy('sample.localName')
+      .addGroupBy('sample.quantityUnit')
       .having(
         `SUM(CASE WHEN tx.transactionType IN ('IMPORT', 'TRANSFER_IN') THEN tx.quantity ELSE 0 END) - SUM(CASE WHEN tx.transactionType IN ('EXPORT', 'TRANSFER_OUT') THEN ABS(tx.quantity) ELSE 0 END) > 0`,
       )
@@ -269,7 +272,7 @@ export class InventoryService {
       varietyName: r.varietyName,
       localName: r.localName,
       availableQuantity: Number(r.totalIn) - Number(r.totalOut),
-      unit: r.unit || 'g',
+      unit: r.unit || 'gram',
     }));
   }
 

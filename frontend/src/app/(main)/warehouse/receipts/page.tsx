@@ -36,6 +36,23 @@ import dayjs from 'dayjs';
 
 const { Title } = Typography;
 
+// Map đơn vị chuẩn hóa sang nhãn hiển thị
+const unitLabelMap: Record<string, string> = {
+  gram: 'Gram',
+  kg: 'Kg',
+  hat: 'Hạt',
+};
+
+// Lấy đơn vị chuẩn hóa từ sample
+const getSampleUnit = (sample: any): string => {
+  const unit = sample?.quantityUnit || 'gram';
+  const lower = unit.toLowerCase().trim();
+  if (lower === 'g' || lower === 'gram') return 'gram';
+  if (lower === 'kg' || lower === 'kilogram') return 'kg';
+  if (lower === 'hat' || lower === 'hạt') return 'hat';
+  return lower;
+};
+
 const statusColors: Record<string, string> = {
   DRAFT: 'default',
   CONFIRMED: 'green',
@@ -180,12 +197,15 @@ export default function WarehouseReceiptsPage() {
     form.setFieldsValue({
       ...record,
       receiptDate: dayjs(record.receiptDate),
-      items: record.items?.map((item: any) => ({
-        sampleId: item.sampleId,
-        locationPath: item.locationId ? findPathInTree(tree || [], item.locationId) : undefined,
-        quantity: item.quantity,
-        unit: item.unit || 'g',
-      })) || [{}],
+      items: record.items?.map((item: any) => {
+        const sample = samples.find((s) => s.id === item.sampleId);
+        return {
+          sampleId: item.sampleId,
+          locationPath: item.locationId ? findPathInTree(tree || [], item.locationId) : undefined,
+          quantity: item.quantity,
+          unit: sample ? getSampleUnit(sample) : (item.unit || 'gram'),
+        };
+      }) || [{}],
     });
     setIsModalOpen(true);
   };
@@ -442,69 +462,86 @@ export default function WarehouseReceiptsPage() {
           <Form.List name="items">
             {(fields, { add, remove }) => (
               <>
-                {fields.map(({ key, name, ...restField }) => (
-                  <div
-                    key={key}
-                    style={{
-                      display: 'grid',
-                      gridTemplateColumns: '2fr 2fr 1fr 1fr auto',
-                      gap: 8,
-                      marginBottom: 8,
-                    }}
-                  >
-                    <Form.Item
-                      {...restField}
-                      name={[name, 'sampleId']}
-                      rules={[{ required: true, message: 'Chọn mẫu' }]}
-                    >
-                      <Select placeholder="Chọn mẫu" showSearch optionFilterProp="children">
-                        {samples.map((s) => (
-                          <Select.Option key={s.id} value={s.id}>
-                            {s.code} - {s.varietyName || s.localName}
-                          </Select.Option>
-                        ))}
-                      </Select>
-                    </Form.Item>
+                {fields.map(({ key, name, ...restField }) => {
+                  const currentSampleId = form.getFieldValue(['items', name, 'sampleId']);
+                  const currentSample = samples.find((s) => s.id === currentSampleId);
+                  const sampleUnit = currentSample ? getSampleUnit(currentSample) : null;
 
-                    <Form.Item {...restField} name={[name, 'locationPath']}>
-                      <Cascader
-                        options={locationOptions}
-                        placeholder="Chọn vị trí lưu trữ"
-                        changeOnSelect
-                        expandTrigger="hover"
-                        showSearch={{
-                          filter: (inputValue: string, path: any[]) =>
-                            path.some((option) =>
-                              (option.label as string).toLowerCase().includes(inputValue.toLowerCase())
-                            ),
-                        }}
+                  return (
+                    <div
+                      key={key}
+                      style={{
+                        display: 'grid',
+                        gridTemplateColumns: '2fr 2fr 1fr 1fr auto',
+                        gap: 8,
+                        marginBottom: 8,
+                      }}
+                    >
+                      <Form.Item
+                        {...restField}
+                        name={[name, 'sampleId']}
+                        rules={[{ required: true, message: 'Chọn mẫu' }]}
+                      >
+                        <Select
+                          placeholder="Chọn mẫu"
+                          showSearch
+                          optionFilterProp="children"
+                          onChange={(sampleId: string) => {
+                            const selected = samples.find((s) => s.id === sampleId);
+                            if (selected) {
+                              const unit = getSampleUnit(selected);
+                              form.setFieldValue(['items', name, 'unit'], unit);
+                            }
+                          }}
+                        >
+                          {samples.map((s) => (
+                            <Select.Option key={s.id} value={s.id}>
+                              {s.code} - {s.varietyName || s.localName} ({s.initialQuantity || 0} {unitLabelMap[getSampleUnit(s)] || s.quantityUnit})
+                            </Select.Option>
+                          ))}
+                        </Select>
+                      </Form.Item>
+
+                      <Form.Item {...restField} name={[name, 'locationPath']}>
+                        <Cascader
+                          options={locationOptions}
+                          placeholder="Chọn vị trí lưu trữ"
+                          changeOnSelect
+                          expandTrigger="hover"
+                          showSearch={{
+                            filter: (inputValue: string, path: any[]) =>
+                              path.some((option) =>
+                                (option.label as string).toLowerCase().includes(inputValue.toLowerCase())
+                              ),
+                          }}
+                        />
+                      </Form.Item>
+
+                      <Form.Item
+                        {...restField}
+                        name={[name, 'quantity']}
+                        rules={[{ required: true, message: 'Nhập SL' }]}
+                      >
+                        <InputNumber placeholder="Số lượng" min={0} style={{ width: '100%' }} />
+                      </Form.Item>
+
+                      <Form.Item {...restField} name={[name, 'unit']} initialValue="gram">
+                        <Select disabled>
+                          <Select.Option value="gram">Gram</Select.Option>
+                          <Select.Option value="kg">Kg</Select.Option>
+                          <Select.Option value="hat">Hạt</Select.Option>
+                        </Select>
+                      </Form.Item>
+
+                      <Button
+                        type="text"
+                        danger
+                        icon={<MinusCircleOutlined />}
+                        onClick={() => remove(name)}
                       />
-                    </Form.Item>
-
-                    <Form.Item
-                      {...restField}
-                      name={[name, 'quantity']}
-                      rules={[{ required: true, message: 'Nhập SL' }]}
-                    >
-                      <InputNumber placeholder="Số lượng" min={0} style={{ width: '100%' }} />
-                    </Form.Item>
-
-                    <Form.Item {...restField} name={[name, 'unit']} initialValue="g">
-                      <Select>
-                        <Select.Option value="g">gram</Select.Option>
-                        <Select.Option value="kg">kg</Select.Option>
-                        <Select.Option value="hạt">hạt</Select.Option>
-                      </Select>
-                    </Form.Item>
-
-                    <Button
-                      type="text"
-                      danger
-                      icon={<MinusCircleOutlined />}
-                      onClick={() => remove(name)}
-                    />
-                  </div>
-                ))}
+                    </div>
+                  );
+                })}
                 <Button type="dashed" onClick={() => add()} block icon={<PlusOutlined />}>
                   Thêm mẫu
                 </Button>
@@ -580,7 +617,7 @@ export default function WarehouseReceiptsPage() {
                   title: 'Số lượng',
                   key: 'quantity',
                   align: 'right' as const,
-                  render: (_: any, record: any) => `${record.quantity} ${record.unit || 'g'}`,
+                  render: (_: any, record: any) => `${record.quantity} ${unitLabelMap[record.unit] || record.unit || 'gram'}`,
                 },
               ]}
             />

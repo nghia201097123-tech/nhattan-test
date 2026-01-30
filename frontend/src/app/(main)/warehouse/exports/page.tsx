@@ -38,6 +38,23 @@ import dayjs from 'dayjs';
 
 const { Title, Text } = Typography;
 
+// Map đơn vị chuẩn hóa sang nhãn hiển thị
+const unitLabelMap: Record<string, string> = {
+  gram: 'Gram',
+  kg: 'Kg',
+  hat: 'Hạt',
+};
+
+// Lấy đơn vị chuẩn hóa từ sample
+const getSampleUnit = (sample: any): string => {
+  const unit = sample?.quantityUnit || 'gram';
+  const lower = unit.toLowerCase().trim();
+  if (lower === 'g' || lower === 'gram') return 'gram';
+  if (lower === 'kg' || lower === 'kilogram') return 'kg';
+  if (lower === 'hat' || lower === 'hạt') return 'hat';
+  return lower;
+};
+
 const statusColors: Record<string, string> = {
   DRAFT: 'default',
   PENDING_APPROVAL: 'processing',
@@ -152,11 +169,14 @@ export default function WarehouseExportsPage() {
     form.setFieldsValue({
       ...record,
       exportDate: dayjs(record.exportDate),
-      items: record.items?.map((item: any) => ({
-        sampleId: item.sampleId,
-        quantity: item.quantity,
-        unit: item.unit || 'g',
-      })) || [{}],
+      items: record.items?.map((item: any) => {
+        const sample = samples.find((s) => s.id === item.sampleId);
+        return {
+          sampleId: item.sampleId,
+          quantity: item.quantity,
+          unit: sample ? getSampleUnit(sample) : (item.unit || 'gram'),
+        };
+      }) || [{}],
     });
     setIsModalOpen(true);
   };
@@ -497,10 +517,21 @@ export default function WarehouseExportsPage() {
                       name={[name, 'sampleId']}
                       rules={[{ required: true, message: 'Chọn mẫu' }]}
                     >
-                      <Select placeholder="Chọn mẫu" showSearch optionFilterProp="children">
+                      <Select
+                        placeholder="Chọn mẫu"
+                        showSearch
+                        optionFilterProp="children"
+                        onChange={(sampleId: string) => {
+                          const selected = samples.find((s) => s.id === sampleId);
+                          if (selected) {
+                            const unit = getSampleUnit(selected);
+                            form.setFieldValue(['items', name, 'unit'], unit);
+                          }
+                        }}
+                      >
                         {samples.map((s) => (
                           <Select.Option key={s.id} value={s.id}>
-                            {s.code} - {s.varietyName || s.localName} (Tồn: {s.currentQuantity || 0})
+                            {s.code} - {s.varietyName || s.localName} (Tồn: {s.currentQuantity || 0} {unitLabelMap[getSampleUnit(s)] || s.quantityUnit})
                           </Select.Option>
                         ))}
                       </Select>
@@ -514,11 +545,11 @@ export default function WarehouseExportsPage() {
                       <InputNumber placeholder="Số lượng" min={0} style={{ width: '100%' }} />
                     </Form.Item>
 
-                    <Form.Item {...restField} name={[name, 'unit']} initialValue="g">
-                      <Select>
-                        <Select.Option value="g">gram</Select.Option>
-                        <Select.Option value="kg">kg</Select.Option>
-                        <Select.Option value="hạt">hạt</Select.Option>
+                    <Form.Item {...restField} name={[name, 'unit']} initialValue="gram">
+                      <Select disabled>
+                        <Select.Option value="gram">Gram</Select.Option>
+                        <Select.Option value="kg">Kg</Select.Option>
+                        <Select.Option value="hat">Hạt</Select.Option>
                       </Select>
                     </Form.Item>
 
@@ -633,7 +664,7 @@ export default function WarehouseExportsPage() {
                   title: 'Số lượng',
                   key: 'quantity',
                   align: 'right' as const,
-                  render: (_: any, record: any) => `${record.quantity} ${record.unit || 'g'}`,
+                  render: (_: any, record: any) => `${record.quantity} ${unitLabelMap[record.unit] || record.unit || 'gram'}`,
                 },
               ]}
             />

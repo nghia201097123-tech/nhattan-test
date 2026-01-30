@@ -23,6 +23,46 @@ export class TransfersService {
     private dataSource: DataSource,
   ) {}
 
+  // Chuẩn hóa đơn vị: 'g' -> 'gram', 'hạt' -> 'hat'
+  private normalizeUnit(unit: string): string {
+    if (!unit) return 'gram';
+    const lower = unit.toLowerCase().trim();
+    if (lower === 'g' || lower === 'gram') return 'gram';
+    if (lower === 'kg' || lower === 'kilogram') return 'kg';
+    if (lower === 'hat' || lower === 'hạt') return 'hat';
+    return lower;
+  }
+
+  // Hiển thị tên đơn vị
+  private unitLabel(unit: string): string {
+    const normalized = this.normalizeUnit(unit);
+    if (normalized === 'gram') return 'gram';
+    if (normalized === 'kg') return 'kg';
+    if (normalized === 'hat') return 'hạt';
+    return unit;
+  }
+
+  // Validate đơn vị của item phải khớp với đơn vị thu thập của mẫu
+  private async validateItemUnits(items: Array<{ sampleId: string; unit?: string }>): Promise<void> {
+    for (const itemDto of items) {
+      const sample = await this.sampleRepo.findOne({ where: { id: itemDto.sampleId } });
+      if (!sample) {
+        throw new BadRequestException(`Không tìm thấy mẫu với ID: ${itemDto.sampleId}`);
+      }
+
+      const itemUnit = this.normalizeUnit(itemDto.unit || 'gram');
+      const sampleUnit = this.normalizeUnit(sample.quantityUnit || 'gram');
+
+      if (itemUnit !== sampleUnit) {
+        throw new BadRequestException(
+          `Mẫu "${sample.code}" có đơn vị thu thập là "${this.unitLabel(sampleUnit)}". ` +
+          `Đơn vị chuyển kho phải cùng đơn vị "${this.unitLabel(sampleUnit)}", ` +
+          `không thể dùng "${this.unitLabel(itemUnit)}".`,
+        );
+      }
+    }
+  }
+
   async generateTransferNumber(): Promise<string> {
     const year = new Date().getFullYear();
     const prefix = `CK${year}`;
@@ -121,6 +161,11 @@ export class TransfersService {
   }
 
   async create(dto: CreateTransferDto, userId: string) {
+    // Validate đơn vị phải khớp với mẫu
+    if (dto.items && dto.items.length > 0) {
+      await this.validateItemUnits(dto.items as Array<{ sampleId: string; unit?: string }>);
+    }
+
     const transferNumber = await this.generateTransferNumber();
 
     const transfer = this.transferRepo.create({
@@ -144,7 +189,7 @@ export class TransfersService {
         fromLocationId: item.fromLocationId,
         toLocationId: item.toLocationId,
         quantity: item.quantity,
-        unit: item.unit,
+        unit: this.normalizeUnit(item.unit),
         notes: item.notes,
       }),
     );
@@ -159,6 +204,11 @@ export class TransfersService {
 
     if (transfer.status !== TransferStatus.DRAFT) {
       throw new BadRequestException('Chỉ có thể sửa phiếu ở trạng thái nháp');
+    }
+
+    // Validate đơn vị phải khớp với mẫu
+    if (dto.items && dto.items.length > 0) {
+      await this.validateItemUnits(dto.items as Array<{ sampleId: string; unit?: string }>);
     }
 
     Object.assign(transfer, {
@@ -178,7 +228,7 @@ export class TransfersService {
           fromLocationId: item.fromLocationId,
           toLocationId: item.toLocationId,
           quantity: item.quantity,
-          unit: item.unit,
+          unit: this.normalizeUnit(item.unit),
           notes: item.notes,
         }),
       );
@@ -214,8 +264,22 @@ export class TransfersService {
       throw new BadRequestException('Phiếu chuyển kho phải có ít nhất 1 mẫu');
     }
 
-    // Validate: quantity không được vượt tồn kho
+    // Validate: đơn vị phải khớp + quantity không được vượt tồn kho
     for (const item of transfer.items) {
+      // Validate đơn vị phải cùng đơn vị với mẫu thu thập
+      const sample = await this.sampleRepo.findOne({ where: { id: item.sampleId } });
+      if (sample) {
+        const itemUnit = this.normalizeUnit(item.unit || 'gram');
+        const sampleUnit = this.normalizeUnit(sample.quantityUnit || 'gram');
+        if (itemUnit !== sampleUnit) {
+          throw new BadRequestException(
+            `Mẫu "${sample.code}" có đơn vị thu thập là "${this.unitLabel(sampleUnit)}". ` +
+            `Đơn vị chuyển kho phải cùng đơn vị "${this.unitLabel(sampleUnit)}", ` +
+            `không thể dùng "${this.unitLabel(itemUnit)}".`,
+          );
+        }
+      }
+
       const stockResult = await this.transactionRepo
         .createQueryBuilder('tx')
         .select(
@@ -258,7 +322,7 @@ export class TransfersService {
           warehouseId: transfer.fromWarehouseId,
           transactionType: TransactionType.TRANSFER_OUT,
           quantity: -item.quantity,
-          unit: item.unit || 'g',
+          unit: this.normalizeUnit(item.unit || 'gram'),
           referenceType: ReferenceType.TRANSFER,
           referenceId: transfer.id,
           transactionDate: new Date(),
@@ -311,7 +375,7 @@ export class TransfersService {
           warehouseId: transfer.toWarehouseId,
           transactionType: TransactionType.TRANSFER_IN,
           quantity: item.quantity,
-          unit: item.unit || 'g',
+          unit: this.normalizeUnit(item.unit || 'gram'),
           referenceType: ReferenceType.TRANSFER,
           referenceId: transfer.id,
           transactionDate: new Date(),
@@ -367,7 +431,7 @@ export class TransfersService {
             warehouseId: transfer.fromWarehouseId,
             transactionType: TransactionType.ADJUSTMENT,
             quantity: item.quantity,
-            unit: item.unit || 'g',
+            unit: this.normalizeUnit(item.unit || 'gram'),
             referenceType: ReferenceType.TRANSFER_CANCEL,
             referenceId: transfer.id,
             transactionDate: new Date(),

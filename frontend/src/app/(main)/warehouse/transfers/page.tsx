@@ -40,6 +40,23 @@ import dayjs from 'dayjs';
 const { Title } = Typography;
 const { TextArea } = Input;
 
+// Map đơn vị chuẩn hóa sang nhãn hiển thị
+const unitLabelMap: Record<string, string> = {
+  gram: 'Gram',
+  kg: 'Kg',
+  hat: 'Hạt',
+};
+
+// Lấy đơn vị chuẩn hóa từ sample
+const getSampleUnit = (sample: any): string => {
+  const unit = sample?.quantityUnit || 'gram';
+  const lower = unit.toLowerCase().trim();
+  if (lower === 'g' || lower === 'gram') return 'gram';
+  if (lower === 'kg' || lower === 'kilogram') return 'kg';
+  if (lower === 'hat' || lower === 'hạt') return 'hat';
+  return lower;
+};
+
 const statusColors: Record<string, string> = {
   DRAFT: 'default',
   IN_TRANSIT: 'processing',
@@ -209,7 +226,7 @@ export default function TransfersPage() {
         sampleId: i.sampleId,
         toLocationPath: i.toLocationId ? findPathInTree(toTree || [], i.toLocationId) : undefined,
         quantity: i.quantity,
-        unit: i.unit || 'g',
+        unit: i.sample ? getSampleUnit(i.sample) : (i.unit || 'gram'),
       })) || [{}],
     });
     setIsModalOpen(true);
@@ -585,15 +602,21 @@ export default function TransfersPage() {
                             placeholder="Chọn mẫu"
                             showSearch
                             optionFilterProp="children"
-                            onChange={() => {
+                            onChange={(sampleId: string) => {
                               // Force re-render to update available stock display
                               form.setFieldValue(['items', name, 'quantity'], undefined);
+                              // Auto-set unit from stock data
+                              const stock = availableStocks.find(s => s.sampleId === sampleId);
+                              if (stock) {
+                                const normalizedUnit = getSampleUnit({ quantityUnit: stock.unit });
+                                form.setFieldValue(['items', name, 'unit'], normalizedUnit);
+                              }
                             }}
                           >
                             {availableStocks.length > 0
                               ? availableStocks.map(s => (
                                   <Select.Option key={s.sampleId} value={s.sampleId}>
-                                    {s.sampleCode} - {s.varietyName || s.localName} (Tồn: {s.availableQuantity})
+                                    {s.sampleCode} - {s.varietyName || s.localName} (Tồn: {s.availableQuantity} {unitLabelMap[getSampleUnit({ quantityUnit: s.unit })] || s.unit})
                                   </Select.Option>
                                 ))
                               : <Select.Option disabled value="">Chọn kho nguồn trước</Select.Option>
@@ -641,9 +664,9 @@ export default function TransfersPage() {
                           />
                         </Form.Item>
 
-                        <Form.Item {...restField} name={[name, 'unit']} initialValue="g" style={{ marginBottom: 0 }}>
-                          <Select>
-                            <Select.Option value="g">Gram</Select.Option>
+                        <Form.Item {...restField} name={[name, 'unit']} initialValue="gram" style={{ marginBottom: 0 }}>
+                          <Select disabled>
+                            <Select.Option value="gram">Gram</Select.Option>
                             <Select.Option value="kg">Kg</Select.Option>
                             <Select.Option value="hat">Hạt</Select.Option>
                           </Select>
@@ -660,6 +683,11 @@ export default function TransfersPage() {
                       {available !== null && available >= 0 && (
                         <div style={{ fontSize: 12, color: '#1890ff', marginBottom: 8, paddingLeft: 4 }}>
                           Tồn kho: <strong>{available}</strong>
+                          {currentSampleId && (() => {
+                            const stock = availableStocks.find(s => s.sampleId === currentSampleId);
+                            if (stock) return ` ${unitLabelMap[getSampleUnit({ quantityUnit: stock.unit })] || stock.unit}`;
+                            return '';
+                          })()}
                         </div>
                       )}
                     </div>
@@ -744,7 +772,7 @@ export default function TransfersPage() {
                   title: 'Số lượng',
                   dataIndex: 'quantity',
                   key: 'quantity',
-                  render: (qty: number, record: any) => `${qty} ${record.unit || 'g'}`,
+                  render: (qty: number, record: any) => `${qty} ${unitLabelMap[record.unit] || record.unit || 'gram'}`,
                 },
               ]}
               rowKey="id"
