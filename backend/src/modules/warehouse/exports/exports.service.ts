@@ -4,6 +4,7 @@ import { Repository, DataSource } from 'typeorm';
 import { WarehouseExport } from './entities/warehouse-export.entity';
 import { WarehouseExportItem } from './entities/warehouse-export-item.entity';
 import { Sample } from '../../samples/collection/entities/sample.entity';
+import { InventoryTransaction } from '../inventory/entities/inventory-transaction.entity';
 import { PaginationDto, createPaginatedResult } from '../../../common/dto/pagination.dto';
 import { generateCode } from '../../../common/utils/code-generator.util';
 import { ExportStatus, canTransition } from '../../../shared/constants/export-status.constant';
@@ -17,6 +18,8 @@ export class ExportsService {
     private readonly itemRepository: Repository<WarehouseExportItem>,
     @InjectRepository(Sample)
     private readonly sampleRepo: Repository<Sample>,
+    @InjectRepository(InventoryTransaction)
+    private readonly transactionRepo: Repository<InventoryTransaction>,
     private readonly dataSource: DataSource,
   ) {}
 
@@ -55,6 +58,41 @@ export class ExportsService {
           `Mẫu "${sample.code}" có đơn vị thu thập là "${this.unitLabel(sampleUnit)}". ` +
           `Đơn vị xuất kho phải cùng đơn vị "${this.unitLabel(sampleUnit)}", ` +
           `không thể dùng "${this.unitLabel(itemUnit)}".`,
+        );
+      }
+    }
+  }
+
+  // Validate tồn kho: SL xuất không được vượt quá tồn kho khả dụng trong kho
+  private async validateStockAvailability(
+    warehouseId: string,
+    items: Array<{ sampleId: string; quantity: number }>,
+  ): Promise<void> {
+    for (const item of items) {
+      const result = await this.transactionRepo
+        .createQueryBuilder('tx')
+        .select(
+          `SUM(CASE WHEN tx.transactionType IN ('IMPORT', 'TRANSFER_IN') THEN tx.quantity ELSE 0 END)`,
+          'totalIn',
+        )
+        .addSelect(
+          `SUM(CASE WHEN tx.transactionType IN ('EXPORT', 'TRANSFER_OUT') THEN ABS(tx.quantity) ELSE 0 END)`,
+          'totalOut',
+        )
+        .where('tx.warehouseId = :warehouseId', { warehouseId })
+        .andWhere('tx.sampleId = :sampleId', { sampleId: item.sampleId })
+        .getRawOne();
+
+      const totalIn = Number(result?.totalIn) || 0;
+      const totalOut = Number(result?.totalOut) || 0;
+      const available = totalIn - totalOut;
+
+      if (Number(item.quantity) > available) {
+        const sample = await this.sampleRepo.findOne({ where: { id: item.sampleId } });
+        const sampleUnit = this.normalizeUnit(sample?.quantityUnit || 'gram');
+        throw new BadRequestException(
+          `Mẫu "${sample?.code}" tồn kho khả dụng ${available} ${this.unitLabel(sampleUnit)}, ` +
+          `không thể xuất ${item.quantity}.`,
         );
       }
     }
@@ -229,6 +267,14 @@ export class ExportsService {
     if (!canTransition(exportRecord.status, ExportStatus.PENDING_APPROVAL)) {
       throw new BadRequestException('Cannot submit for approval from current status');
     }
+
+    if (!exportRecord.items || exportRecord.items.length === 0) {
+      throw new BadRequestException('Phiếu xuất phải có ít nhất 1 mẫu');
+    }
+
+    // Validate tồn kho trước khi gửi duyệt
+    await this.validateStockAvailability(exportRecord.warehouseId, exportRecord.items);
+
     exportRecord.status = ExportStatus.PENDING_APPROVAL;
     exportRecord.submittedAt = new Date();
     exportRecord.submittedBy = userId;
@@ -240,6 +286,12 @@ export class ExportsService {
     if (!canTransition(exportRecord.status, ExportStatus.APPROVED)) {
       throw new BadRequestException('Cannot approve from current status');
     }
+
+    // Validate tồn kho lần cuối trước khi duyệt (phòng trường hợp tồn kho thay đổi)
+    if (exportRecord.items && exportRecord.items.length > 0) {
+      await this.validateStockAvailability(exportRecord.warehouseId, exportRecord.items);
+    }
+
     exportRecord.status = ExportStatus.APPROVED;
     exportRecord.approvedBy = userId;
     exportRecord.approvedAt = new Date();

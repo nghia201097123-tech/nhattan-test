@@ -27,6 +27,7 @@ import {
   EyeOutlined,
   EditOutlined,
   DeleteOutlined,
+  CheckOutlined,
   MinusCircleOutlined,
 } from '@ant-design/icons';
 import { receiptsService } from '@/services/warehouse.service';
@@ -230,6 +231,20 @@ export default function WarehouseReceiptsPage() {
     }
   };
 
+  const handleConfirm = async (id: string) => {
+    try {
+      await receiptsService.confirm(id);
+      message.success('Đã duyệt phiếu nhập');
+      fetchReceipts();
+      if (isDetailOpen) {
+        const detail = await receiptsService.getById(id);
+        setSelectedReceipt(detail);
+      }
+    } catch (error: any) {
+      message.error(error.response?.data?.message || 'Không thể duyệt phiếu');
+    }
+  };
+
   const handleSubmit = async (values: any) => {
     setSubmitting(true);
     try {
@@ -315,7 +330,7 @@ export default function WarehouseReceiptsPage() {
     {
       title: 'Thao tác',
       key: 'actions',
-      width: 150,
+      width: 200,
       render: (_: any, record: any) => (
         <Space>
           <Tooltip title="Xem">
@@ -328,6 +343,14 @@ export default function WarehouseReceiptsPage() {
           </Tooltip>
           {record.status === 'DRAFT' && (
             <>
+              <Popconfirm
+                title="Xác nhận duyệt phiếu nhập?"
+                onConfirm={() => handleConfirm(record.id)}
+              >
+                <Tooltip title="Duyệt">
+                  <Button type="text" size="small" style={{ color: 'green' }} icon={<CheckOutlined />} />
+                </Tooltip>
+              </Popconfirm>
               <Tooltip title="Sửa">
                 <Button
                   type="text"
@@ -595,6 +618,13 @@ export default function WarehouseReceiptsPage() {
         width={700}
         open={isDetailOpen}
         onClose={() => setIsDetailOpen(false)}
+        extra={
+          selectedReceipt?.status === 'DRAFT' && (
+            <Popconfirm title="Xác nhận duyệt phiếu nhập?" onConfirm={() => handleConfirm(selectedReceipt.id)}>
+              <Button type="primary" icon={<CheckOutlined />}>Duyệt phiếu</Button>
+            </Popconfirm>
+          )
+        }
       >
         {selectedReceipt && (
           <>

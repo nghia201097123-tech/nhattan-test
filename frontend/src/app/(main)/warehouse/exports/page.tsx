@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Card,
   Table,
@@ -31,9 +31,8 @@ import {
   SendOutlined,
   MinusCircleOutlined,
 } from '@ant-design/icons';
-import { exportsService } from '@/services/warehouse.service';
+import { exportsService, inventoryService } from '@/services/warehouse.service';
 import { warehousesService, exportReasonsService } from '@/services/catalog.service';
-import { samplesService } from '@/services/samples.service';
 import dayjs from 'dayjs';
 
 const { Title, Text } = Typography;
@@ -90,7 +89,8 @@ export default function WarehouseExportsPage() {
 
   const [warehouses, setWarehouses] = useState<any[]>([]);
   const [reasons, setReasons] = useState<any[]>([]);
-  const [samples, setSamples] = useState<any[]>([]);
+  const [availableStocks, setAvailableStocks] = useState<any[]>([]);
+  const [stockMap, setStockMap] = useState<Record<string, number>>({});
   const [submitting, setSubmitting] = useState(false);
 
   const loadWarehouses = async () => {
@@ -112,14 +112,24 @@ export default function WarehouseExportsPage() {
     }
   };
 
-  const loadSamples = async () => {
-    try {
-      const res = await samplesService.getAll({ page: 1, limit: 500 });
-      setSamples(res.data || []);
-    } catch (error) {
-      console.error('Error loading samples:', error);
+  const loadAvailableStock = useCallback(async (warehouseId?: string) => {
+    if (!warehouseId) {
+      setAvailableStocks([]);
+      setStockMap({});
+      return;
     }
-  };
+    try {
+      const stocks = await inventoryService.getAvailableStockByWarehouse(warehouseId);
+      setAvailableStocks(stocks || []);
+      const map: Record<string, number> = {};
+      for (const s of stocks || []) {
+        map[s.sampleId] = s.availableQuantity;
+      }
+      setStockMap(map);
+    } catch (error) {
+      console.error('Error loading stock:', error);
+    }
+  }, []);
 
   const fetchExports = async () => {
     setLoading(true);
@@ -138,16 +148,22 @@ export default function WarehouseExportsPage() {
   useEffect(() => {
     loadWarehouses();
     loadReasons();
-    loadSamples();
   }, []);
 
   useEffect(() => {
     fetchExports();
   }, [page, limit, search, statusFilter]);
 
+  const handleWarehouseChange = (warehouseId: string) => {
+    loadAvailableStock(warehouseId);
+    form.setFieldsValue({ items: [{}] });
+  };
+
   const handleCreate = async () => {
     setEditingId(null);
     form.resetFields();
+    setAvailableStocks([]);
+    setStockMap({});
     try {
       const { code } = await exportsService.generateCode();
       form.setFieldsValue({
@@ -166,17 +182,15 @@ export default function WarehouseExportsPage() {
 
   const handleEdit = async (record: any) => {
     setEditingId(record.id);
+    await loadAvailableStock(record.warehouseId);
     form.setFieldsValue({
       ...record,
       exportDate: dayjs(record.exportDate),
-      items: record.items?.map((item: any) => {
-        const sample = samples.find((s) => s.id === item.sampleId);
-        return {
-          sampleId: item.sampleId,
-          quantity: item.quantity,
-          unit: sample ? getSampleUnit(sample) : (item.unit || 'gram'),
-        };
-      }) || [{}],
+      items: record.items?.map((item: any) => ({
+        sampleId: item.sampleId,
+        quantity: item.quantity,
+        unit: item.unit || 'gram',
+      })) || [{}],
     });
     setIsModalOpen(true);
   };
@@ -434,7 +448,12 @@ export default function WarehouseExportsPage() {
       <Modal
         title={editingId ? 'Sửa phiếu xuất kho' : 'Tạo phiếu xuất kho'}
         open={isModalOpen}
-        onCancel={() => setIsModalOpen(false)}
+        onCancel={() => {
+          form.resetFields();
+          setAvailableStocks([]);
+          setStockMap({});
+          setIsModalOpen(false);
+        }}
         onOk={() => form.submit()}
         confirmLoading={submitting}
         width={900}
@@ -454,7 +473,12 @@ export default function WarehouseExportsPage() {
               label="Kho xuất"
               rules={[{ required: true, message: 'Vui lòng chọn kho' }]}
             >
-              <Select placeholder="Chọn kho" showSearch optionFilterProp="children">
+              <Select
+                placeholder="Chọn kho"
+                showSearch
+                optionFilterProp="children"
+                onChange={handleWarehouseChange}
+              >
                 {warehouses.map((w) => (
                   <Select.Option key={w.id} value={w.id}>{w.name}</Select.Option>
                 ))}
@@ -512,10 +536,10 @@ export default function WarehouseExportsPage() {
                   >
                     {() => {
                       const currentSampleId = form.getFieldValue(['items', name, 'sampleId']);
-                      const currentSample = samples.find((s) => s.id === currentSampleId);
-                      const sampleUnit = currentSample ? getSampleUnit(currentSample) : null;
+                      const currentStock = currentSampleId ? availableStocks.find(s => s.sampleId === currentSampleId) : null;
+                      const sampleUnit = currentStock ? getSampleUnit({ quantityUnit: currentStock.unit }) : null;
                       const unitLabel = sampleUnit ? (unitLabelMap[sampleUnit] || sampleUnit) : '';
-                      const maxStock = currentSample?.currentQuantity ?? undefined;
+                      const maxStock = currentSampleId ? (stockMap[currentSampleId] ?? undefined) : undefined;
 
                       return (
                         <div style={{ marginBottom: 8 }}>
@@ -537,19 +561,22 @@ export default function WarehouseExportsPage() {
                                 showSearch
                                 optionFilterProp="children"
                                 onChange={(sampleId: string) => {
-                                  const selected = samples.find((s) => s.id === sampleId);
-                                  if (selected) {
-                                    const unit = getSampleUnit(selected);
-                                    form.setFieldValue(['items', name, 'unit'], unit);
-                                    form.setFieldValue(['items', name, 'quantity'], undefined);
+                                  form.setFieldValue(['items', name, 'quantity'], undefined);
+                                  const stock = availableStocks.find(s => s.sampleId === sampleId);
+                                  if (stock) {
+                                    const normalizedUnit = getSampleUnit({ quantityUnit: stock.unit });
+                                    form.setFieldValue(['items', name, 'unit'], normalizedUnit);
                                   }
                                 }}
                               >
-                                {samples.map((s) => (
-                                  <Select.Option key={s.id} value={s.id}>
-                                    {s.code} - {s.varietyName || s.localName}
-                                  </Select.Option>
-                                ))}
+                                {availableStocks.length > 0
+                                  ? availableStocks.map((s) => (
+                                      <Select.Option key={s.sampleId} value={s.sampleId}>
+                                        {s.sampleCode} - {s.varietyName || s.localName}
+                                      </Select.Option>
+                                    ))
+                                  : <Select.Option disabled value="">Chọn kho xuất trước</Select.Option>
+                                }
                               </Select>
                             </Form.Item>
 
@@ -560,9 +587,11 @@ export default function WarehouseExportsPage() {
                                 { required: true, message: 'Nhập SL' },
                                 {
                                   validator: (_, value) => {
-                                    if (!value || maxStock == null) return Promise.resolve();
-                                    if (value > maxStock) {
-                                      return Promise.reject(`Tối đa ${maxStock} ${unitLabel}`);
+                                    const sampleId = form.getFieldValue(['items', name, 'sampleId']);
+                                    if (!sampleId || !value) return Promise.resolve();
+                                    const maxQty = stockMap[sampleId] ?? 0;
+                                    if (value > maxQty) {
+                                      return Promise.reject(`Tối đa ${maxQty} ${unitLabel}`);
                                     }
                                     return Promise.resolve();
                                   },
@@ -594,7 +623,7 @@ export default function WarehouseExportsPage() {
                               style={{ marginTop: 4 }}
                             />
                           </div>
-                          {currentSample && maxStock != null && (
+                          {maxStock != null && maxStock >= 0 && (
                             <div style={{ fontSize: 12, color: '#1890ff', marginTop: 2, paddingLeft: 4 }}>
                               Tồn kho: <strong>{maxStock}</strong> {unitLabel}
                             </div>
