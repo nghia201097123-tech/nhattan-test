@@ -15,11 +15,12 @@ export class PaginationDto {
   @Type(() => Number)
   @IsInt()
   @Min(1)
-  @Max(100)
+  @Max(500)
   limit?: number = 20;
 
   @ApiPropertyOptional({ default: 'createdAt' })
   @IsOptional()
+  @Type(() => String)
   @IsString()
   sortBy?: string = 'createdAt';
 
@@ -30,6 +31,7 @@ export class PaginationDto {
 
   @ApiPropertyOptional()
   @IsOptional()
+  @Type(() => String)
   @IsString()
   search?: string;
 }

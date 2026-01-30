@@ -24,6 +24,7 @@ export enum ReferenceType {
   RECEIPT = 'RECEIPT',
   EXPORT = 'EXPORT',
   TRANSFER = 'TRANSFER',
+  TRANSFER_CANCEL = 'TRANSFER_CANCEL',
 }
 
 @Entity('inventory_transactions')

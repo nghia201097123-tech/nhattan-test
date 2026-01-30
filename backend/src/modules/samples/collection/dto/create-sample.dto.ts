@@ -44,6 +44,11 @@ export class CreateSampleDto {
 
   @ApiPropertyOptional()
   @IsOptional()
+  @IsNumber()
+  collectionYear?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
   @IsString()
   @MaxLength(50)
   season?: string;

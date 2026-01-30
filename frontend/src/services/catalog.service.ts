@@ -45,12 +45,20 @@ export const seedCategoriesService = {
 
 // Seed Varieties
 export const seedVarietiesService = {
-  async getAll(params?: PaginationParams): Promise<PaginatedResult<SeedVariety>> {
+  async getAll(params?: PaginationParams & { categoryId?: string }): Promise<PaginatedResult<SeedVariety>> {
     const response = await api.get<PaginatedResult<SeedVariety>>(
       '/catalog/seed-varieties',
       { params }
     );
     return response.data;
+  },
+
+  async getByCategory(categoryId: string): Promise<SeedVariety[]> {
+    const response = await api.get<PaginatedResult<SeedVariety>>(
+      '/catalog/seed-varieties',
+      { params: { categoryId, page: 1, limit: 500 } }
+    );
+    return response.data?.data || [];
   },
 
   async getById(id: string): Promise<SeedVariety> {
@@ -174,6 +182,11 @@ export const storageLocationsService = {
 export const staffService = {
   async getAll(params?: PaginationParams): Promise<PaginatedResult<Staff>> {
     const response = await api.get<PaginatedResult<Staff>>('/catalog/staff', { params });
+    return response.data;
+  },
+
+  async getByRole(role: string): Promise<Staff[]> {
+    const response = await api.get<Staff[]>(`/catalog/staff/by-role/${role}`);
     return response.data;
   },
 

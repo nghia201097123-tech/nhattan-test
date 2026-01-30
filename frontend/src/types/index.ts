@@ -301,3 +301,73 @@ export interface StockSummary {
   totalOut: number;
   currentStock: number;
 }
+
+// Propagation types
+export type PropagationStatus = 'PLANNED' | 'IN_PROGRESS' | 'HARVESTED' | 'COMPLETED' | 'CANCELLED';
+
+export interface PropagationBatch {
+  id: string;
+  code: string;
+  name?: string;
+  sampleId: string;
+  sample?: Sample;
+  propagatorId?: string;
+  propagator?: Staff;
+  startDate: string;
+  expectedEndDate?: string;
+  actualEndDate?: string;
+  initialQuantity: number;
+  initialUnit: string;
+  harvestQuantity?: number;
+  harvestUnit: string;
+  propagationLocation?: string;
+  propagationMethod?: string;
+  environmentConditions?: string;
+  progress: number;
+  status: PropagationStatus;
+  harvestDate?: string;
+  harvestNotes?: string;
+  qualityRating?: string;
+  resultWarehouseId?: string;
+  resultWarehouse?: Warehouse;
+  resultLocationId?: string;
+  resultLocation?: StorageLocation;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Seed Card types
+export interface SeedCardConfig {
+  showCode?: boolean;
+  showVarietyName?: boolean;
+  showCategory?: boolean;
+  showCollectionDate?: boolean;
+  showLocation?: boolean;
+  showProvider?: boolean;
+  showScientificName?: boolean;
+  showGerminationRate?: boolean;
+  showExpiryDate?: boolean;
+  showStorageLocation?: boolean;
+  showQRCode?: boolean;
+  qrCodeSize?: number;
+  logoUrl?: string;
+  cardTitle?: string;
+  cardWidth?: number;
+  cardHeight?: number;
+}
+
+export interface SeedCardData {
+  id: string;
+  code: string;
+  varietyName: string;
+  categoryName: string;
+  scientificName?: string;
+  collectionDate: string;
+  location?: string;
+  providerName?: string;
+  germinationRate?: number;
+  expiryDate?: string;
+  storageLocation?: string;
+  qrCodeData: string;
+}

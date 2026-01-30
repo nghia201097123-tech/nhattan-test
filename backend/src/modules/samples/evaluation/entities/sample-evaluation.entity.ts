@@ -8,14 +8,13 @@ import {
   JoinColumn,
 } from 'typeorm';
 import { Sample } from '../../collection/entities/sample.entity';
-import { Staff } from '../../../catalog/staff/entities/staff.entity';
 import { User } from '../../../users/entities/user.entity';
 import { EvaluationResult } from './evaluation-result.entity';
 
 export enum EvaluationOverallResult {
-  PASSED = 'PASSED',
-  FAILED = 'FAILED',
-  NEEDS_PROPAGATION = 'NEEDS_PROPAGATION',
+  PASS = 'PASS',
+  FAIL = 'FAIL',
+  CONDITIONAL = 'CONDITIONAL',
 }
 
 @Entity('sample_evaluations')
@@ -39,9 +38,9 @@ export class SampleEvaluation {
   @Column({ name: 'evaluator_id', type: 'uuid', nullable: true })
   evaluatorId: string;
 
-  @ManyToOne(() => Staff)
+  @ManyToOne(() => User)
   @JoinColumn({ name: 'evaluator_id' })
-  evaluator: Staff;
+  evaluator: User;
 
   @Column({ name: 'overall_result', type: 'enum', enum: EvaluationOverallResult, nullable: true })
   overallResult: EvaluationOverallResult;

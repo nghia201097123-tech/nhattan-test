@@ -128,12 +128,147 @@ export class InventoryService {
 
     let balance = 0;
     return transactions.map((tx) => {
-      if (tx.transactionType === TransactionType.IMPORT) {
+      if (tx.transactionType === TransactionType.IMPORT || tx.transactionType === TransactionType.TRANSFER_IN) {
         balance += Number(tx.quantity);
-      } else if (tx.transactionType === TransactionType.EXPORT) {
-        balance -= Number(tx.quantity);
+      } else if (tx.transactionType === TransactionType.EXPORT || tx.transactionType === TransactionType.TRANSFER_OUT) {
+        balance -= Math.abs(Number(tx.quantity));
+      } else if (tx.transactionType === TransactionType.ADJUSTMENT) {
+        balance += Number(tx.quantity);
       }
       return { ...tx, balance };
     });
+  }
+
+  // Thống kê nhập-xuất-tồn theo kỳ
+  async getInventoryReport(query: {
+    warehouseId?: string;
+    categoryId?: string;
+    fromDate: string;
+    toDate: string;
+  }) {
+    const { warehouseId, categoryId, fromDate, toDate } = query;
+
+    const qb = this.repository
+      .createQueryBuilder('tx')
+      .select('tx.sampleId', 'sampleId')
+      .addSelect('sample.code', 'sampleCode')
+      .addSelect('sample.varietyName', 'varietyName')
+      .addSelect('sample.localName', 'localName')
+      .addSelect('category.name', 'categoryName')
+      .addSelect('warehouse.name', 'warehouseName')
+      .addSelect(`SUM(CASE WHEN tx.transactionType IN ('IMPORT', 'TRANSFER_IN') AND tx.quantity > 0 THEN tx.quantity ELSE 0 END)`, 'totalIn')
+      .addSelect(`SUM(CASE WHEN tx.transactionType IN ('EXPORT', 'TRANSFER_OUT') THEN ABS(tx.quantity) ELSE 0 END)`, 'totalOut')
+      .addSelect(`SUM(CASE WHEN tx.transactionType = 'ADJUSTMENT' THEN tx.quantity ELSE 0 END)`, 'adjustment')
+      .leftJoin('tx.sample', 'sample')
+      .leftJoin('sample.category', 'category')
+      .leftJoin('tx.warehouse', 'warehouse')
+      .where('tx.transactionDate >= :fromDate', { fromDate })
+      .andWhere('tx.transactionDate <= :toDate', { toDate });
+
+    if (warehouseId) {
+      qb.andWhere('tx.warehouseId = :warehouseId', { warehouseId });
+    }
+
+    if (categoryId) {
+      qb.andWhere('sample.categoryId = :categoryId', { categoryId });
+    }
+
+    qb.groupBy('tx.sampleId')
+      .addGroupBy('sample.code')
+      .addGroupBy('sample.varietyName')
+      .addGroupBy('sample.localName')
+      .addGroupBy('category.name')
+      .addGroupBy('warehouse.name');
+
+    const data = await qb.getRawMany();
+
+    return data.map((r) => ({
+      sampleId: r.sampleId,
+      sampleCode: r.sampleCode,
+      varietyName: r.varietyName || r.localName,
+      categoryName: r.categoryName,
+      warehouseName: r.warehouseName,
+      totalIn: Number(r.totalIn) || 0,
+      totalOut: Number(r.totalOut) || 0,
+      adjustment: Number(r.adjustment) || 0,
+      netChange: (Number(r.totalIn) || 0) - (Number(r.totalOut) || 0) + (Number(r.adjustment) || 0),
+    }));
+  }
+
+  // Thống kê tổng quan
+  async getSummaryStatistics(query: { warehouseId?: string; fromDate?: string; toDate?: string }) {
+    const { warehouseId, fromDate, toDate } = query;
+
+    const qb = this.repository.createQueryBuilder('tx');
+
+    if (warehouseId) {
+      qb.andWhere('tx.warehouseId = :warehouseId', { warehouseId });
+    }
+
+    if (fromDate) {
+      qb.andWhere('tx.transactionDate >= :fromDate', { fromDate });
+    }
+
+    if (toDate) {
+      qb.andWhere('tx.transactionDate <= :toDate', { toDate });
+    }
+
+    const stats = await qb
+      .select(`SUM(CASE WHEN tx.transactionType IN ('IMPORT', 'TRANSFER_IN') AND tx.quantity > 0 THEN tx.quantity ELSE 0 END)`, 'totalImport')
+      .addSelect(`SUM(CASE WHEN tx.transactionType IN ('EXPORT', 'TRANSFER_OUT') THEN ABS(tx.quantity) ELSE 0 END)`, 'totalExport')
+      .addSelect(`COUNT(DISTINCT tx.sampleId)`, 'totalSamples')
+      .addSelect(`COUNT(DISTINCT CASE WHEN tx.transactionType = 'IMPORT' THEN tx.referenceId END)`, 'receiptCount')
+      .addSelect(`COUNT(DISTINCT CASE WHEN tx.transactionType = 'EXPORT' THEN tx.referenceId END)`, 'exportCount')
+      .addSelect(`COUNT(DISTINCT CASE WHEN tx.transactionType IN ('TRANSFER_IN', 'TRANSFER_OUT') THEN tx.referenceId END)`, 'transferCount')
+      .getRawOne();
+
+    return {
+      totalImport: Number(stats.totalImport) || 0,
+      totalExport: Number(stats.totalExport) || 0,
+      totalSamples: Number(stats.totalSamples) || 0,
+      receiptCount: Number(stats.receiptCount) || 0,
+      exportCount: Number(stats.exportCount) || 0,
+      transferCount: Number(stats.transferCount) || 0,
+    };
+  }
+
+  // Biểu đồ biến động theo thời gian
+  async getMovementChart(query: { warehouseId?: string; fromDate: string; toDate: string; groupBy: 'day' | 'week' | 'month' }) {
+    const { warehouseId, fromDate, toDate, groupBy } = query;
+
+    let dateFormat: string;
+    switch (groupBy) {
+      case 'day':
+        dateFormat = 'YYYY-MM-DD';
+        break;
+      case 'week':
+        dateFormat = 'IYYY-IW';
+        break;
+      case 'month':
+      default:
+        dateFormat = 'YYYY-MM';
+    }
+
+    const qb = this.repository
+      .createQueryBuilder('tx')
+      .select(`TO_CHAR(tx.transactionDate, '${dateFormat}')`, 'period')
+      .addSelect(`SUM(CASE WHEN tx.transactionType IN ('IMPORT', 'TRANSFER_IN') AND tx.quantity > 0 THEN tx.quantity ELSE 0 END)`, 'totalIn')
+      .addSelect(`SUM(CASE WHEN tx.transactionType IN ('EXPORT', 'TRANSFER_OUT') THEN ABS(tx.quantity) ELSE 0 END)`, 'totalOut')
+      .where('tx.transactionDate >= :fromDate', { fromDate })
+      .andWhere('tx.transactionDate <= :toDate', { toDate });
+
+    if (warehouseId) {
+      qb.andWhere('tx.warehouseId = :warehouseId', { warehouseId });
+    }
+
+    qb.groupBy('period').orderBy('period', 'ASC');
+
+    const data = await qb.getRawMany();
+
+    return data.map((r) => ({
+      period: r.period,
+      totalIn: Number(r.totalIn) || 0,
+      totalOut: Number(r.totalOut) || 0,
+    }));
   }
 }
