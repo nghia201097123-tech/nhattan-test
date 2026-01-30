@@ -104,11 +104,7 @@ export class ExportsService {
 
     const queryBuilder = this.repository
       .createQueryBuilder('exp')
-      .leftJoinAndSelect('exp.warehouse', 'warehouse')
-      .leftJoinAndSelect('exp.creator', 'creator')
-      .leftJoinAndSelect('exp.submitter', 'submitter')
-      .leftJoinAndSelect('exp.approver', 'approver')
-      .leftJoinAndSelect('exp.items', 'items');
+      .leftJoinAndSelect('exp.warehouse', 'warehouse');
 
     if (search) {
       queryBuilder.andWhere('exp.exportNumber ILIKE :search', {
