@@ -103,22 +103,25 @@ export class ExportsService {
     const skip = (page - 1) * limit;
 
     const queryBuilder = this.repository
-      .createQueryBuilder('export')
-      .leftJoinAndSelect('export.warehouse', 'warehouse')
-      .leftJoinAndSelect('export.items', 'items');
+      .createQueryBuilder('exp')
+      .leftJoinAndSelect('exp.warehouse', 'warehouse')
+      .leftJoinAndSelect('exp.creator', 'creator')
+      .leftJoinAndSelect('exp.submitter', 'submitter')
+      .leftJoinAndSelect('exp.approver', 'approver')
+      .leftJoinAndSelect('exp.items', 'items');
 
     if (search) {
-      queryBuilder.andWhere('export.exportNumber ILIKE :search', {
+      queryBuilder.andWhere('exp.exportNumber ILIKE :search', {
         search: `%${search}%`,
       });
     }
 
     if (status) {
-      queryBuilder.andWhere('export.status = :status', { status });
+      queryBuilder.andWhere('exp.status = :status', { status });
     }
 
     queryBuilder
-      .orderBy(`export.${sortBy}`, sortOrder)
+      .orderBy(`exp.${sortBy}`, sortOrder)
       .skip(skip)
       .take(limit);
 
@@ -130,7 +133,7 @@ export class ExportsService {
   async findById(id: string): Promise<WarehouseExport> {
     const exportRecord = await this.repository.findOne({
       where: { id },
-      relations: ['warehouse', 'approver', 'items', 'items.sample'],
+      relations: ['warehouse', 'creator', 'submitter', 'approver', 'items', 'items.sample'],
     });
 
     if (!exportRecord) {
@@ -142,8 +145,8 @@ export class ExportsService {
 
   async generateCode(): Promise<string> {
     const lastExport = await this.repository
-      .createQueryBuilder('export')
-      .orderBy('export.createdAt', 'DESC')
+      .createQueryBuilder('exp')
+      .orderBy('exp.createdAt', 'DESC')
       .getOne();
 
     return generateCode('PX', lastExport?.exportNumber);
