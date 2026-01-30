@@ -507,7 +507,7 @@ export default function WarehouseReceiptsPage() {
                               >
                                 {samples.map((s) => (
                                   <Select.Option key={s.id} value={s.id}>
-                                    {s.code} - {s.varietyName || s.localName} ({s.initialQuantity || 0} {unitLabelMap[getSampleUnit(s)] || s.quantityUnit})
+                                    {s.code} - {s.varietyName || s.localName}
                                   </Select.Option>
                                 ))}
                               </Select>

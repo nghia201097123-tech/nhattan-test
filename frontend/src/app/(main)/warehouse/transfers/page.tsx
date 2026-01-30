@@ -623,7 +623,7 @@ export default function TransfersPage() {
                                 {availableStocks.length > 0
                                   ? availableStocks.map(s => (
                                       <Select.Option key={s.sampleId} value={s.sampleId}>
-                                        {s.sampleCode} - {s.varietyName || s.localName} (Tồn: {s.availableQuantity} {unitLabelMap[getSampleUnit({ quantityUnit: s.unit })] || s.unit})
+                                        {s.sampleCode} - {s.varietyName || s.localName}
                                       </Select.Option>
                                     ))
                                   : <Select.Option disabled value="">Chọn kho nguồn trước</Select.Option>

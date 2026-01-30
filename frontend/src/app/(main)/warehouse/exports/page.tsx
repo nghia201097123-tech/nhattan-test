@@ -547,7 +547,7 @@ export default function WarehouseExportsPage() {
                               >
                                 {samples.map((s) => (
                                   <Select.Option key={s.id} value={s.id}>
-                                    {s.code} - {s.varietyName || s.localName} (Tồn: {s.currentQuantity || 0} {unitLabelMap[getSampleUnit(s)] || s.quantityUnit})
+                                    {s.code} - {s.varietyName || s.localName}
                                   </Select.Option>
                                 ))}
                               </Select>
