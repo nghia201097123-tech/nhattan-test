@@ -19,6 +19,7 @@ import {
   Drawer,
   Descriptions,
   Popconfirm,
+  Alert,
 } from 'antd';
 import {
   PlusOutlined,
@@ -30,6 +31,9 @@ import {
   CloseOutlined,
   SendOutlined,
   MinusCircleOutlined,
+  ExportOutlined,
+  UndoOutlined,
+  StopOutlined,
 } from '@ant-design/icons';
 import { exportsService, inventoryService } from '@/services/warehouse.service';
 import { warehousesService, exportReasonsService } from '@/services/catalog.service';
@@ -273,6 +277,59 @@ export default function WarehouseExportsPage() {
     }
   };
 
+  const handleExported = async (id: string) => {
+    try {
+      await exportsService.exported(id);
+      message.success('Đã xuất kho thành công');
+      fetchExports();
+      if (isDetailOpen) {
+        const detail = await exportsService.getById(id);
+        setSelectedExport(detail);
+      }
+    } catch (error: any) {
+      message.error(error.response?.data?.message || 'Không thể xuất kho');
+    }
+  };
+
+  const handleCancel = async (id: string) => {
+    try {
+      await exportsService.cancel(id);
+      message.success('Đã hủy phiếu xuất');
+      fetchExports();
+      setIsDetailOpen(false);
+    } catch (error: any) {
+      message.error(error.response?.data?.message || 'Không thể hủy phiếu');
+    }
+  };
+
+  const handleResubmit = async (id: string) => {
+    try {
+      await exportsService.resubmit(id);
+      message.success('Đã chuyển phiếu về nháp để chỉnh sửa');
+      fetchExports();
+      setIsDetailOpen(false);
+    } catch (error: any) {
+      message.error(error.response?.data?.message || 'Không thể chuyển về nháp');
+    }
+  };
+
+  const showRejectModal = (id: string) => {
+    Modal.confirm({
+      title: 'Từ chối phiếu xuất',
+      content: (
+        <Input.TextArea
+          id={`reject-reason-${id}`}
+          placeholder="Lý do từ chối"
+          rows={3}
+        />
+      ),
+      onOk: () => {
+        const reason = (document.getElementById(`reject-reason-${id}`) as any)?.value;
+        handleReject(id, reason);
+      },
+    });
+  };
+
   const columns = [
     {
       title: 'Số phiếu',
@@ -316,35 +373,22 @@ export default function WarehouseExportsPage() {
     {
       title: 'Thao tác',
       key: 'actions',
-      width: 180,
+      width: 220,
       render: (_: any, record: any) => (
         <Space>
           <Tooltip title="Xem">
-            <Button
-              type="text"
-              size="small"
-              icon={<EyeOutlined />}
-              onClick={() => handleView(record)}
-            />
+            <Button type="text" size="small" icon={<EyeOutlined />} onClick={() => handleView(record)} />
           </Tooltip>
           {record.status === 'DRAFT' && (
             <>
               <Tooltip title="Sửa">
-                <Button
-                  type="text"
-                  size="small"
-                  icon={<EditOutlined />}
-                  onClick={() => handleEdit(record)}
-                />
+                <Button type="text" size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
               </Tooltip>
-              <Tooltip title="Gửi duyệt">
-                <Button
-                  type="text"
-                  size="small"
-                  icon={<SendOutlined />}
-                  onClick={() => handleSubmitForApproval(record.id)}
-                />
-              </Tooltip>
+              <Popconfirm title="Gửi phiếu chờ duyệt?" onConfirm={() => handleSubmitForApproval(record.id)}>
+                <Tooltip title="Gửi duyệt">
+                  <Button type="text" size="small" icon={<SendOutlined />} />
+                </Tooltip>
+              </Popconfirm>
               <Popconfirm title="Xác nhận xóa?" onConfirm={() => handleDelete(record.id)}>
                 <Tooltip title="Xóa">
                   <Button type="text" size="small" danger icon={<DeleteOutlined />} />
@@ -354,40 +398,36 @@ export default function WarehouseExportsPage() {
           )}
           {record.status === 'PENDING_APPROVAL' && (
             <>
-              <Tooltip title="Duyệt">
-                <Button
-                  type="text"
-                  size="small"
-                  style={{ color: 'green' }}
-                  icon={<CheckOutlined />}
-                  onClick={() => handleApprove(record.id)}
-                />
-              </Tooltip>
+              <Popconfirm title="Xác nhận duyệt phiếu?" onConfirm={() => handleApprove(record.id)}>
+                <Tooltip title="Duyệt">
+                  <Button type="text" size="small" style={{ color: 'green' }} icon={<CheckOutlined />} />
+                </Tooltip>
+              </Popconfirm>
               <Tooltip title="Từ chối">
-                <Button
-                  type="text"
-                  size="small"
-                  danger
-                  icon={<CloseOutlined />}
-                  onClick={() => {
-                    Modal.confirm({
-                      title: 'Từ chối phiếu xuất',
-                      content: (
-                        <Input.TextArea
-                          id="reject-reason"
-                          placeholder="Lý do từ chối"
-                          rows={3}
-                        />
-                      ),
-                      onOk: () => {
-                        const reason = (document.getElementById('reject-reason') as any)?.value;
-                        handleReject(record.id, reason);
-                      },
-                    });
-                  }}
-                />
+                <Button type="text" size="small" danger icon={<CloseOutlined />} onClick={() => showRejectModal(record.id)} />
               </Tooltip>
             </>
+          )}
+          {record.status === 'APPROVED' && (
+            <>
+              <Popconfirm title="Xác nhận xuất kho? Tồn kho sẽ bị trừ." onConfirm={() => handleExported(record.id)}>
+                <Tooltip title="Xuất kho">
+                  <Button type="text" size="small" style={{ color: '#1890ff' }} icon={<ExportOutlined />} />
+                </Tooltip>
+              </Popconfirm>
+              <Popconfirm title="Xác nhận hủy phiếu?" onConfirm={() => handleCancel(record.id)}>
+                <Tooltip title="Hủy">
+                  <Button type="text" size="small" danger icon={<StopOutlined />} />
+                </Tooltip>
+              </Popconfirm>
+            </>
+          )}
+          {record.status === 'REJECTED' && (
+            <Popconfirm title="Chuyển phiếu về nháp để chỉnh sửa?" onConfirm={() => handleResubmit(record.id)}>
+              <Tooltip title="Sửa lại">
+                <Button type="text" size="small" icon={<UndoOutlined />} />
+              </Tooltip>
+            </Popconfirm>
           )}
         </Space>
       ),
@@ -650,34 +690,54 @@ export default function WarehouseExportsPage() {
         open={isDetailOpen}
         onClose={() => setIsDetailOpen(false)}
         extra={
-          selectedExport?.status === 'PENDING_APPROVAL' && (
+          selectedExport && (
             <Space>
-              <Button type="primary" onClick={() => handleApprove(selectedExport.id)}>
-                Duyệt
-              </Button>
-              <Button
-                danger
-                onClick={() => {
-                  Modal.confirm({
-                    title: 'Từ chối phiếu xuất',
-                    content: (
-                      <Input.TextArea id="reject-reason-drawer" placeholder="Lý do từ chối" rows={3} />
-                    ),
-                    onOk: () => {
-                      const reason = (document.getElementById('reject-reason-drawer') as any)?.value;
-                      handleReject(selectedExport.id, reason);
-                    },
-                  });
-                }}
-              >
-                Từ chối
-              </Button>
+              {selectedExport.status === 'DRAFT' && (
+                <Popconfirm title="Gửi phiếu chờ duyệt?" onConfirm={() => { handleSubmitForApproval(selectedExport.id); setIsDetailOpen(false); }}>
+                  <Button icon={<SendOutlined />}>Gửi duyệt</Button>
+                </Popconfirm>
+              )}
+              {selectedExport.status === 'PENDING_APPROVAL' && (
+                <>
+                  <Popconfirm title="Xác nhận duyệt phiếu?" onConfirm={() => handleApprove(selectedExport.id)}>
+                    <Button type="primary" icon={<CheckOutlined />}>Duyệt</Button>
+                  </Popconfirm>
+                  <Button danger icon={<CloseOutlined />} onClick={() => showRejectModal(selectedExport.id)}>
+                    Từ chối
+                  </Button>
+                </>
+              )}
+              {selectedExport.status === 'APPROVED' && (
+                <>
+                  <Popconfirm title="Xác nhận xuất kho? Tồn kho sẽ bị trừ." onConfirm={() => handleExported(selectedExport.id)}>
+                    <Button type="primary" icon={<ExportOutlined />}>Xuất kho</Button>
+                  </Popconfirm>
+                  <Popconfirm title="Xác nhận hủy phiếu?" onConfirm={() => handleCancel(selectedExport.id)}>
+                    <Button danger icon={<StopOutlined />}>Hủy</Button>
+                  </Popconfirm>
+                </>
+              )}
+              {selectedExport.status === 'REJECTED' && (
+                <Popconfirm title="Chuyển phiếu về nháp để chỉnh sửa?" onConfirm={() => handleResubmit(selectedExport.id)}>
+                  <Button icon={<UndoOutlined />}>Sửa lại</Button>
+                </Popconfirm>
+              )}
             </Space>
           )
         }
       >
         {selectedExport && (
           <>
+            {selectedExport.status === 'REJECTED' && selectedExport.rejectionReason && (
+              <Alert
+                type="error"
+                showIcon
+                style={{ marginBottom: 16 }}
+                message="Phiếu bị từ chối"
+                description={selectedExport.rejectionReason}
+              />
+            )}
+
             <Descriptions column={2} bordered size="small" style={{ marginBottom: 24 }}>
               <Descriptions.Item label="Số phiếu">{selectedExport.exportNumber}</Descriptions.Item>
               <Descriptions.Item label="Trạng thái">
@@ -704,10 +764,20 @@ export default function WarehouseExportsPage() {
               <Descriptions.Item label="Ngày tạo">
                 {dayjs(selectedExport.createdAt).format('DD/MM/YYYY HH:mm')}
               </Descriptions.Item>
-              {selectedExport.status === 'REJECTED' && (
-                <Descriptions.Item label="Lý do từ chối" span={2}>
-                  <Text type="danger">{selectedExport.rejectionReason || '-'}</Text>
+              {selectedExport.submittedAt && (
+                <Descriptions.Item label="Ngày gửi duyệt" span={2}>
+                  {dayjs(selectedExport.submittedAt).format('DD/MM/YYYY HH:mm')}
                 </Descriptions.Item>
+              )}
+              {selectedExport.approvedAt && (
+                <>
+                  <Descriptions.Item label="Người duyệt">
+                    {selectedExport.approver?.fullName || '-'}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Ngày duyệt">
+                    {dayjs(selectedExport.approvedAt).format('DD/MM/YYYY HH:mm')}
+                  </Descriptions.Item>
+                </>
               )}
               <Descriptions.Item label="Ghi chú" span={2}>
                 {selectedExport.notes || '-'}

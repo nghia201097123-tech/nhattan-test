@@ -98,6 +98,21 @@ export const exportsService = {
     return response.data;
   },
 
+  async exported(id: string): Promise<WarehouseExport> {
+    const response = await api.post<WarehouseExport>(`/warehouse/exports/${id}/exported`);
+    return response.data;
+  },
+
+  async cancel(id: string): Promise<WarehouseExport> {
+    const response = await api.post<WarehouseExport>(`/warehouse/exports/${id}/cancel`);
+    return response.data;
+  },
+
+  async resubmit(id: string): Promise<WarehouseExport> {
+    const response = await api.post<WarehouseExport>(`/warehouse/exports/${id}/resubmit`);
+    return response.data;
+  },
+
   async delete(id: string): Promise<void> {
     await api.delete(`/warehouse/exports/${id}`);
   },

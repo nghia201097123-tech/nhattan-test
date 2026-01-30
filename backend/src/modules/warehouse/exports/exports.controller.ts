@@ -84,6 +84,27 @@ export class ExportsController {
     return this.service.reject(id, userId, dto.rejectReason);
   }
 
+  @Post(':id/exported')
+  @ApiOperation({ summary: 'Mark export as exported - creates inventory transactions' })
+  async exported(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser('id') userId: string,
+  ) {
+    return this.service.exported(id, userId);
+  }
+
+  @Post(':id/cancel')
+  @ApiOperation({ summary: 'Cancel export' })
+  async cancel(@Param('id', ParseUUIDPipe) id: string) {
+    return this.service.cancel(id);
+  }
+
+  @Post(':id/resubmit')
+  @ApiOperation({ summary: 'Resubmit rejected export back to draft' })
+  async resubmit(@Param('id', ParseUUIDPipe) id: string) {
+    return this.service.resubmit(id);
+  }
+
   @Delete(':id')
   @ApiOperation({ summary: 'Delete export' })
   async remove(@Param('id', ParseUUIDPipe) id: string) {

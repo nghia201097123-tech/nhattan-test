@@ -4,7 +4,7 @@ import { Repository, DataSource } from 'typeorm';
 import { WarehouseExport } from './entities/warehouse-export.entity';
 import { WarehouseExportItem } from './entities/warehouse-export-item.entity';
 import { Sample } from '../../samples/collection/entities/sample.entity';
-import { InventoryTransaction } from '../inventory/entities/inventory-transaction.entity';
+import { InventoryTransaction, TransactionType, ReferenceType } from '../inventory/entities/inventory-transaction.entity';
 import { PaginationDto, createPaginatedResult } from '../../../common/dto/pagination.dto';
 import { generateCode } from '../../../common/utils/code-generator.util';
 import { ExportStatus, canTransition } from '../../../shared/constants/export-status.constant';
@@ -308,6 +308,87 @@ export class ExportsService {
     exportRecord.approvedBy = userId;
     exportRecord.approvedAt = new Date();
     exportRecord.rejectionReason = reason;
+    return this.repository.save(exportRecord);
+  }
+
+  async exported(id: string, userId: string): Promise<WarehouseExport> {
+    const exportRecord = await this.findById(id);
+    if (!canTransition(exportRecord.status, ExportStatus.EXPORTED)) {
+      throw new BadRequestException('Không thể xuất kho từ trạng thái hiện tại');
+    }
+
+    if (!exportRecord.items || exportRecord.items.length === 0) {
+      throw new BadRequestException('Phiếu xuất không có mẫu nào');
+    }
+
+    // Validate tồn kho lần cuối trước khi xuất thực tế
+    await this.validateStockAvailability(exportRecord.warehouseId, exportRecord.items);
+
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      for (const item of exportRecord.items) {
+        const sample = item.sample || await this.sampleRepo.findOne({ where: { id: item.sampleId } });
+        const unit = this.normalizeUnit(item.unit || sample?.quantityUnit || 'gram');
+
+        // Tạo EXPORT InventoryTransaction (giống receipts tạo IMPORT khi confirm)
+        const transaction = this.transactionRepo.create({
+          sampleId: item.sampleId,
+          warehouseId: exportRecord.warehouseId,
+          locationId: item.locationId || null,
+          transactionType: TransactionType.EXPORT,
+          quantity: -Number(item.quantity), // Âm: xuất kho
+          unit,
+          referenceType: ReferenceType.EXPORT,
+          referenceId: exportRecord.id,
+          referenceNumber: exportRecord.exportNumber,
+          transactionDate: exportRecord.exportDate || new Date(),
+          notes: `Xuất kho từ phiếu ${exportRecord.exportNumber}`,
+          createdBy: userId,
+        });
+        await queryRunner.manager.save(transaction);
+
+        // Trừ currentQuantity trên Sample
+        await queryRunner.manager.decrement(
+          Sample,
+          { id: item.sampleId },
+          'currentQuantity',
+          Number(item.quantity),
+        );
+      }
+
+      exportRecord.status = ExportStatus.EXPORTED;
+      delete (exportRecord as any).items;
+      await queryRunner.manager.save(exportRecord);
+      await queryRunner.commitTransaction();
+
+      return this.findById(id);
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      await queryRunner.release();
+    }
+  }
+
+  async cancel(id: string): Promise<WarehouseExport> {
+    const exportRecord = await this.findById(id);
+    if (!canTransition(exportRecord.status, ExportStatus.CANCELLED)) {
+      throw new BadRequestException('Không thể hủy phiếu từ trạng thái hiện tại');
+    }
+    exportRecord.status = ExportStatus.CANCELLED;
+    return this.repository.save(exportRecord);
+  }
+
+  async resubmit(id: string): Promise<WarehouseExport> {
+    const exportRecord = await this.findById(id);
+    if (!canTransition(exportRecord.status, ExportStatus.DRAFT)) {
+      throw new BadRequestException('Không thể chuyển về nháp từ trạng thái hiện tại');
+    }
+    exportRecord.status = ExportStatus.DRAFT;
+    exportRecord.rejectionReason = null;
     return this.repository.save(exportRecord);
   }
 
