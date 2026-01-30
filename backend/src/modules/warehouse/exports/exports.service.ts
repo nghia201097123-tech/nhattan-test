@@ -99,7 +99,7 @@ export class ExportsService {
   }
 
   async findAll(query: PaginationDto & { status?: ExportStatus }) {
-    const { page, limit, sortBy, sortOrder, search, status } = query;
+    const { page = 1, limit = 20, sortBy = 'createdAt', sortOrder = 'DESC', search, status } = query;
     const skip = (page - 1) * limit;
 
     const queryBuilder = this.repository
