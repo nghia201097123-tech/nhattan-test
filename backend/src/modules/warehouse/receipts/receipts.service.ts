@@ -110,10 +110,42 @@ export class ReceiptsService {
     }
   }
 
+  // Validate số lượng nhập kho không vượt quá số lượng thu thập của mẫu
+  private async validateItemQuantities(items: Array<{ sampleId: string; quantity: number; unit?: string }>): Promise<void> {
+    for (const itemDto of items) {
+      const sample = await this.sampleRepo.findOne({ where: { id: itemDto.sampleId } });
+      if (!sample) continue;
+
+      if (sample.initialQuantity != null) {
+        const sampleUnit = this.normalizeUnit(sample.quantityUnit || 'gram');
+
+        // Tính tổng đã nhập trước đó (từ các phiếu đã xác nhận)
+        const alreadyImported = await this.transactionRepo
+          .createQueryBuilder('tx')
+          .select('COALESCE(SUM(tx.quantity), 0)', 'total')
+          .where('tx.sampleId = :sampleId', { sampleId: itemDto.sampleId })
+          .andWhere('tx.transactionType = :type', { type: TransactionType.IMPORT })
+          .getRawOne();
+
+        const totalImported = Number(alreadyImported?.total) || 0;
+        const remaining = Number(sample.initialQuantity) - totalImported;
+
+        if (Number(itemDto.quantity) > remaining) {
+          throw new BadRequestException(
+            `Mẫu "${sample.code}" có số lượng thu thập ${sample.initialQuantity} ${this.unitLabel(sampleUnit)}, ` +
+            `đã nhập kho ${totalImported}, còn lại ${remaining}. ` +
+            `Không thể nhập ${itemDto.quantity}.`,
+          );
+        }
+      }
+    }
+  }
+
   async create(dto: any, userId: string): Promise<WarehouseReceipt> {
-    // Validate đơn vị phải khớp với mẫu
+    // Validate đơn vị và số lượng phải khớp với mẫu
     if (dto.items && dto.items.length > 0) {
       await this.validateItemUnits(dto.items);
+      await this.validateItemQuantities(dto.items);
     }
 
     const queryRunner = this.dataSource.createQueryRunner();
@@ -164,9 +196,10 @@ export class ReceiptsService {
   }
 
   async update(id: string, dto: any): Promise<WarehouseReceipt> {
-    // Validate đơn vị phải khớp với mẫu
+    // Validate đơn vị và số lượng phải khớp với mẫu
     if (dto.items && dto.items.length > 0) {
       await this.validateItemUnits(dto.items);
+      await this.validateItemQuantities(dto.items);
     }
 
     const queryRunner = this.dataSource.createQueryRunner();

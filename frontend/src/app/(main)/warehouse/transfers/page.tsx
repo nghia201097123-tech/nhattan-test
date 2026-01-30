@@ -576,125 +576,128 @@ export default function TransfersPage() {
                   <div></div>
                 </div>
 
-                {fields.map(({ key, name, ...restField }) => {
-                  // Get current sampleId to show available stock
-                  const currentSampleId = form.getFieldValue(['items', name, 'sampleId']);
-                  const available = currentSampleId ? (stockMap[currentSampleId] ?? 0) : null;
-                  const currentStock = currentSampleId ? availableStocks.find(s => s.sampleId === currentSampleId) : null;
-                  const sampleUnit = currentStock ? getSampleUnit({ quantityUnit: currentStock.unit }) : null;
+                {fields.map(({ key, name, ...restField }) => (
+                  <Form.Item
+                    key={key}
+                    noStyle
+                    shouldUpdate={(prev, curr) =>
+                      prev?.items?.[name]?.sampleId !== curr?.items?.[name]?.sampleId
+                    }
+                  >
+                    {() => {
+                      const currentSampleId = form.getFieldValue(['items', name, 'sampleId']);
+                      const available = currentSampleId ? (stockMap[currentSampleId] ?? 0) : null;
+                      const currentStock = currentSampleId ? availableStocks.find(s => s.sampleId === currentSampleId) : null;
+                      const sampleUnit = currentStock ? getSampleUnit({ quantityUnit: currentStock.unit }) : null;
+                      const unitLabel = sampleUnit ? (unitLabelMap[sampleUnit] || sampleUnit) : '';
 
-                  return (
-                    <div key={key}>
-                      <div
-                        style={{
-                          display: 'grid',
-                          gridTemplateColumns: '2fr 2fr 1fr auto',
-                          gap: 8,
-                          marginBottom: 4,
-                        }}
-                      >
-                        <Form.Item
-                          {...restField}
-                          name={[name, 'sampleId']}
-                          rules={[{ required: true, message: 'Chọn mẫu' }]}
-                          style={{ marginBottom: 0 }}
-                        >
-                          <Select
-                            placeholder="Chọn mẫu"
-                            showSearch
-                            optionFilterProp="children"
-                            onChange={(sampleId: string) => {
-                              // Force re-render to update available stock display
-                              form.setFieldValue(['items', name, 'quantity'], undefined);
-                              // Auto-set unit from stock data
-                              const stock = availableStocks.find(s => s.sampleId === sampleId);
-                              if (stock) {
-                                const normalizedUnit = getSampleUnit({ quantityUnit: stock.unit });
-                                form.setFieldValue(['items', name, 'unit'], normalizedUnit);
-                              }
+                      return (
+                        <div style={{ marginBottom: 8 }}>
+                          <div
+                            style={{
+                              display: 'grid',
+                              gridTemplateColumns: '2fr 2fr 1fr auto',
+                              gap: 8,
+                              marginBottom: 4,
                             }}
                           >
-                            {availableStocks.length > 0
-                              ? availableStocks.map(s => (
-                                  <Select.Option key={s.sampleId} value={s.sampleId}>
-                                    {s.sampleCode} - {s.varietyName || s.localName} (Tồn: {s.availableQuantity} {unitLabelMap[getSampleUnit({ quantityUnit: s.unit })] || s.unit})
-                                  </Select.Option>
-                                ))
-                              : <Select.Option disabled value="">Chọn kho nguồn trước</Select.Option>
-                            }
-                          </Select>
-                        </Form.Item>
-
-                        <Form.Item {...restField} name={[name, 'toLocationPath']} style={{ marginBottom: 0 }}>
-                          <Cascader
-                            options={locationOptions}
-                            placeholder="Chọn vị trí lưu trữ"
-                            changeOnSelect
-                            expandTrigger="hover"
-                            showSearch={{
-                              filter: (input: string, path: any[]) =>
-                                path.some(opt => (opt.label as string).toLowerCase().includes(input.toLowerCase())),
-                            }}
-                          />
-                        </Form.Item>
-
-                        <Form.Item
-                          {...restField}
-                          name={[name, 'quantity']}
-                          rules={[
-                            { required: true, message: 'Nhập SL' },
-                            {
-                              validator: (_, value) => {
-                                const sampleId = form.getFieldValue(['items', name, 'sampleId']);
-                                if (!sampleId || !value) return Promise.resolve();
-                                const maxQty = stockMap[sampleId] ?? 0;
-                                if (value > maxQty) {
-                                  return Promise.reject(`Tối đa ${maxQty}`);
+                            <Form.Item
+                              {...restField}
+                              name={[name, 'sampleId']}
+                              rules={[{ required: true, message: 'Chọn mẫu' }]}
+                              style={{ marginBottom: 0 }}
+                            >
+                              <Select
+                                placeholder="Chọn mẫu"
+                                showSearch
+                                optionFilterProp="children"
+                                onChange={(sampleId: string) => {
+                                  form.setFieldValue(['items', name, 'quantity'], undefined);
+                                  const stock = availableStocks.find(s => s.sampleId === sampleId);
+                                  if (stock) {
+                                    const normalizedUnit = getSampleUnit({ quantityUnit: stock.unit });
+                                    form.setFieldValue(['items', name, 'unit'], normalizedUnit);
+                                  }
+                                }}
+                              >
+                                {availableStocks.length > 0
+                                  ? availableStocks.map(s => (
+                                      <Select.Option key={s.sampleId} value={s.sampleId}>
+                                        {s.sampleCode} - {s.varietyName || s.localName} (Tồn: {s.availableQuantity} {unitLabelMap[getSampleUnit({ quantityUnit: s.unit })] || s.unit})
+                                      </Select.Option>
+                                    ))
+                                  : <Select.Option disabled value="">Chọn kho nguồn trước</Select.Option>
                                 }
-                                return Promise.resolve();
-                              },
-                            },
-                          ]}
-                          style={{ marginBottom: 0 }}
-                        >
-                          <InputNumber
-                            placeholder="Số lượng"
-                            min={0.01}
-                            max={available ?? undefined}
-                            style={{ width: '100%' }}
-                            addonAfter={sampleUnit ? unitLabelMap[sampleUnit] || sampleUnit : 'ĐV'}
-                          />
-                        </Form.Item>
+                              </Select>
+                            </Form.Item>
 
-                        <Form.Item {...restField} name={[name, 'unit']} initialValue="gram" style={{ marginBottom: 0 }} hidden>
-                          <Select>
-                            <Select.Option value="gram">Gram</Select.Option>
-                            <Select.Option value="kg">Kg</Select.Option>
-                            <Select.Option value="hat">Hạt</Select.Option>
-                          </Select>
-                        </Form.Item>
+                            <Form.Item {...restField} name={[name, 'toLocationPath']} style={{ marginBottom: 0 }}>
+                              <Cascader
+                                options={locationOptions}
+                                placeholder="Chọn vị trí lưu trữ"
+                                changeOnSelect
+                                expandTrigger="hover"
+                                showSearch={{
+                                  filter: (input: string, path: any[]) =>
+                                    path.some(opt => (opt.label as string).toLowerCase().includes(input.toLowerCase())),
+                                }}
+                              />
+                            </Form.Item>
 
-                        <Button
-                          type="text"
-                          danger
-                          icon={<MinusCircleOutlined />}
-                          onClick={() => remove(name)}
-                          style={{ marginTop: 4 }}
-                        />
-                      </div>
-                      {available !== null && available >= 0 && (
-                        <div style={{ fontSize: 12, color: '#1890ff', marginBottom: 8, paddingLeft: 4 }}>
-                          Tồn kho: <strong>{available}</strong>
-                          {currentSampleId && (() => {
-                            const stock = availableStocks.find(s => s.sampleId === currentSampleId);
-                            if (stock) return ` ${unitLabelMap[getSampleUnit({ quantityUnit: stock.unit })] || stock.unit}`;
-                            return '';
-                          })()}
+                            <Form.Item
+                              {...restField}
+                              name={[name, 'quantity']}
+                              rules={[
+                                { required: true, message: 'Nhập SL' },
+                                {
+                                  validator: (_, value) => {
+                                    const sampleId = form.getFieldValue(['items', name, 'sampleId']);
+                                    if (!sampleId || !value) return Promise.resolve();
+                                    const maxQty = stockMap[sampleId] ?? 0;
+                                    if (value > maxQty) {
+                                      return Promise.reject(`Tối đa ${maxQty} ${unitLabel}`);
+                                    }
+                                    return Promise.resolve();
+                                  },
+                                },
+                              ]}
+                              style={{ marginBottom: 0 }}
+                            >
+                              <InputNumber
+                                placeholder="Số lượng"
+                                min={0.01}
+                                max={available ?? undefined}
+                                style={{ width: '100%' }}
+                                addonAfter={unitLabel || 'ĐV'}
+                              />
+                            </Form.Item>
+
+                            <Form.Item {...restField} name={[name, 'unit']} initialValue="gram" style={{ marginBottom: 0 }} hidden>
+                              <Select>
+                                <Select.Option value="gram">Gram</Select.Option>
+                                <Select.Option value="kg">Kg</Select.Option>
+                                <Select.Option value="hat">Hạt</Select.Option>
+                              </Select>
+                            </Form.Item>
+
+                            <Button
+                              type="text"
+                              danger
+                              icon={<MinusCircleOutlined />}
+                              onClick={() => remove(name)}
+                              style={{ marginTop: 4 }}
+                            />
+                          </div>
+                          {available !== null && available >= 0 && (
+                            <div style={{ fontSize: 12, color: '#1890ff', paddingLeft: 4 }}>
+                              Tồn kho: <strong>{available}</strong> {unitLabel}
+                            </div>
+                          )}
                         </div>
-                      )}
-                    </div>
-                  );
-                })}
+                      );
+                    }}
+                  </Form.Item>
+                ))}
                 <Button
                   type="dashed"
                   onClick={() => add()}
