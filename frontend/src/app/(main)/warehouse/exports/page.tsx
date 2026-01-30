@@ -185,18 +185,23 @@ export default function WarehouseExportsPage() {
   };
 
   const handleEdit = async (record: any) => {
-    setEditingId(record.id);
-    await loadAvailableStock(record.warehouseId);
-    form.setFieldsValue({
-      ...record,
-      exportDate: dayjs(record.exportDate),
-      items: record.items?.map((item: any) => ({
-        sampleId: item.sampleId,
-        quantity: item.quantity,
-        unit: item.unit || 'gram',
-      })) || [{}],
-    });
-    setIsModalOpen(true);
+    try {
+      setEditingId(record.id);
+      const detail = await exportsService.getById(record.id);
+      await loadAvailableStock(detail.warehouseId);
+      form.setFieldsValue({
+        ...detail,
+        exportDate: dayjs(detail.exportDate),
+        items: detail.items?.map((item: any) => ({
+          sampleId: item.sampleId,
+          quantity: Number(item.quantity),
+          unit: item.unit || 'gram',
+        })) || [{}],
+      });
+      setIsModalOpen(true);
+    } catch (error) {
+      message.error('Không thể tải chi tiết phiếu');
+    }
   };
 
   const handleView = async (record: any) => {
