@@ -472,7 +472,7 @@ export default function WarehouseReceiptsPage() {
                       key={key}
                       style={{
                         display: 'grid',
-                        gridTemplateColumns: '2fr 2fr 1fr 1fr auto',
+                        gridTemplateColumns: '2fr 2fr 1fr auto',
                         gap: 8,
                         marginBottom: 8,
                       }}
@@ -522,11 +522,16 @@ export default function WarehouseReceiptsPage() {
                         name={[name, 'quantity']}
                         rules={[{ required: true, message: 'Nhập SL' }]}
                       >
-                        <InputNumber placeholder="Số lượng" min={0} style={{ width: '100%' }} />
+                        <InputNumber
+                          placeholder="Số lượng"
+                          min={0}
+                          style={{ width: '100%' }}
+                          addonAfter={sampleUnit ? unitLabelMap[sampleUnit] || sampleUnit : 'ĐV'}
+                        />
                       </Form.Item>
 
-                      <Form.Item {...restField} name={[name, 'unit']} initialValue="gram">
-                        <Select disabled>
+                      <Form.Item {...restField} name={[name, 'unit']} initialValue="gram" hidden>
+                        <Select>
                           <Select.Option value="gram">Gram</Select.Option>
                           <Select.Option value="kg">Kg</Select.Option>
                           <Select.Option value="hat">Hạt</Select.Option>

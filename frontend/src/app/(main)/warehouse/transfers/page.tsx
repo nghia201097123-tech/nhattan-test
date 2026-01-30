@@ -562,7 +562,7 @@ export default function TransfersPage() {
                 <div
                   style={{
                     display: 'grid',
-                    gridTemplateColumns: '2fr 2fr 1fr 100px auto',
+                    gridTemplateColumns: '2fr 2fr 1fr auto',
                     gap: 8,
                     marginBottom: 8,
                     fontWeight: 600,
@@ -573,7 +573,6 @@ export default function TransfersPage() {
                   <div>Mẫu giống *</div>
                   <div>Vị trí (kho đích)</div>
                   <div>Số lượng *</div>
-                  <div>Đơn vị</div>
                   <div></div>
                 </div>
 
@@ -581,13 +580,15 @@ export default function TransfersPage() {
                   // Get current sampleId to show available stock
                   const currentSampleId = form.getFieldValue(['items', name, 'sampleId']);
                   const available = currentSampleId ? (stockMap[currentSampleId] ?? 0) : null;
+                  const currentStock = currentSampleId ? availableStocks.find(s => s.sampleId === currentSampleId) : null;
+                  const sampleUnit = currentStock ? getSampleUnit({ quantityUnit: currentStock.unit }) : null;
 
                   return (
                     <div key={key}>
                       <div
                         style={{
                           display: 'grid',
-                          gridTemplateColumns: '2fr 2fr 1fr 100px auto',
+                          gridTemplateColumns: '2fr 2fr 1fr auto',
                           gap: 8,
                           marginBottom: 4,
                         }}
@@ -661,11 +662,12 @@ export default function TransfersPage() {
                             min={0.01}
                             max={available ?? undefined}
                             style={{ width: '100%' }}
+                            addonAfter={sampleUnit ? unitLabelMap[sampleUnit] || sampleUnit : 'ĐV'}
                           />
                         </Form.Item>
 
-                        <Form.Item {...restField} name={[name, 'unit']} initialValue="gram" style={{ marginBottom: 0 }}>
-                          <Select disabled>
+                        <Form.Item {...restField} name={[name, 'unit']} initialValue="gram" style={{ marginBottom: 0 }} hidden>
+                          <Select>
                             <Select.Option value="gram">Gram</Select.Option>
                             <Select.Option value="kg">Kg</Select.Option>
                             <Select.Option value="hat">Hạt</Select.Option>
