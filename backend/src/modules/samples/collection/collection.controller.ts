@@ -37,6 +37,12 @@ export class CollectionController {
     return this.service.generateCode();
   }
 
+  @Get(':id/full-info')
+  @ApiOperation({ summary: 'Get sample full info with history, evaluations, propagation' })
+  async getFullInfo(@Param('id', ParseUUIDPipe) id: string) {
+    return this.service.getFullInfo(id);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Get sample by id' })
   async findOne(@Param('id', ParseUUIDPipe) id: string) {

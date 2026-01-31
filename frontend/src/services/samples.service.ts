@@ -41,6 +41,11 @@ export const samplesService = {
     await api.delete(`/samples/${id}`);
   },
 
+  async getFullInfo(id: string): Promise<any> {
+    const response = await api.get(`/samples/${id}/full-info`);
+    return response.data;
+  },
+
   async getHistory(id: string): Promise<Sample[]> {
     const response = await api.get<Sample[]>(`/samples/${id}/history`);
     return response.data;

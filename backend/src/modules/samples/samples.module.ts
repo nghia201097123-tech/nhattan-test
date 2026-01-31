@@ -7,6 +7,7 @@ import { SampleAttachment } from './attachments/entities/sample-attachment.entit
 import { SampleEvaluation } from './evaluation/entities/sample-evaluation.entity';
 import { EvaluationResult } from './evaluation/entities/evaluation-result.entity';
 import { PropagationBatch } from './propagation/entities/propagation-batch.entity';
+import { InventoryTransaction } from '../warehouse/inventory/entities/inventory-transaction.entity';
 
 // Controllers
 import { CollectionController } from './collection/collection.controller';
@@ -30,6 +31,7 @@ import { SeedCardService } from './seed-card/seed-card.service';
       SampleEvaluation,
       EvaluationResult,
       PropagationBatch,
+      InventoryTransaction,
     ]),
   ],
   controllers: [

@@ -3,6 +3,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Sample } from './entities/sample.entity';
 import { SampleEvaluation } from '../evaluation/entities/sample-evaluation.entity';
+import { PropagationBatch } from '../propagation/entities/propagation-batch.entity';
+import { InventoryTransaction } from '../../warehouse/inventory/entities/inventory-transaction.entity';
 import { CreateSampleDto } from './dto/create-sample.dto';
 import { UpdateSampleDto } from './dto/update-sample.dto';
 import { SampleFilterDto } from './dto/sample-filter.dto';
@@ -16,10 +18,14 @@ export class CollectionService {
     private readonly repository: Repository<Sample>,
     @InjectRepository(SampleEvaluation)
     private readonly evaluationRepository: Repository<SampleEvaluation>,
+    @InjectRepository(PropagationBatch)
+    private readonly propagationRepo: Repository<PropagationBatch>,
+    @InjectRepository(InventoryTransaction)
+    private readonly transactionRepo: Repository<InventoryTransaction>,
   ) {}
 
   async findAll(query: SampleFilterDto) {
-    const { page, limit, search, sortBy, sortOrder, categoryId, status, warehouseId } = query;
+    const { page = 1, limit = 20, search, sortBy = 'createdAt', sortOrder = 'DESC', categoryId, status, warehouseId } = query;
     const skip = (page - 1) * limit;
 
     const queryBuilder = this.repository
@@ -90,10 +96,12 @@ export class CollectionService {
     return { code: generateSampleCode(lastSample?.code) };
   }
 
-  async getHistory(id: string) {
-    // This would fetch from inventory_transactions
-    // For now, return empty array
-    return [];
+  async getHistory(id: string): Promise<InventoryTransaction[]> {
+    return this.transactionRepo.find({
+      where: { sampleId: id },
+      relations: ['warehouse'],
+      order: { transactionDate: 'DESC', createdAt: 'DESC' },
+    });
   }
 
   async getEvaluations(id: string): Promise<SampleEvaluation[]> {
@@ -102,6 +110,46 @@ export class CollectionService {
       relations: ['evaluator'],
       order: { evaluationDate: 'DESC' },
     });
+  }
+
+  async getFullInfo(id: string) {
+    const [sample, transactions, evaluations, propagations] = await Promise.all([
+      this.findById(id),
+      this.getHistory(id),
+      this.getEvaluations(id),
+      this.propagationRepo.find({ where: { sampleId: id }, order: { startDate: 'DESC' } }),
+    ]);
+
+    // Tính tổng nhập/xuất/chuyển kho
+    let totalImported = 0, totalExported = 0, totalTransferIn = 0, totalTransferOut = 0;
+    for (const t of transactions) {
+      const qty = Math.abs(Number(t.quantity));
+      switch (t.transactionType) {
+        case 'IMPORT': totalImported += qty; break;
+        case 'EXPORT': totalExported += qty; break;
+        case 'TRANSFER_IN': totalTransferIn += qty; break;
+        case 'TRANSFER_OUT': totalTransferOut += qty; break;
+      }
+    }
+
+    const initial = Number(sample.initialQuantity || 0);
+
+    return {
+      ...sample,
+      quantitySummary: {
+        initialQuantity: initial,
+        totalImported,
+        totalExported,
+        totalTransferIn,
+        totalTransferOut,
+        remainingForImport: Math.max(0, initial - totalImported),
+        currentStock: totalImported + totalTransferIn - totalExported - totalTransferOut,
+        unit: sample.quantityUnit || 'gram',
+      },
+      warehouseHistory: transactions,
+      evaluations,
+      propagations,
+    };
   }
 
   async create(dto: CreateSampleDto, userId: string): Promise<Sample> {
