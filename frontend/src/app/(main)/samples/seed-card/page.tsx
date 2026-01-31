@@ -380,8 +380,8 @@ export default function SeedCardPage() {
         title: 'Ngày',
         dataIndex: 'transactionDate',
         key: 'date',
-        width: 120,
-        render: (d: string) => d ? dayjs(d).format('DD/MM/YYYY') : '-',
+        width: 150,
+        render: (d: string) => d ? dayjs(d).format('DD/MM/YYYY HH:mm') : '-',
       },
       {
         title: 'Loại',
@@ -500,7 +500,7 @@ export default function SeedCardPage() {
       dataIndex: 'germinationRate',
       key: 'germinationRate',
       width: 100,
-      render: (val: number) => val !== undefined ? `${val}%` : '-',
+      render: (val: number) => val != null ? `${val}%` : '-',
     },
     {
       title: 'QR Code',
