@@ -224,22 +224,41 @@ export class InventoryService {
       .filter(r => r.currentStock > 0)
       .sort((a, b) => (a.sampleCode || '').localeCompare(b.sampleCode || ''));
 
-    // Lấy vị trí từ transaction gần nhất khi lọc theo kho
+    // Lấy vị trí khi lọc theo kho
     if (warehouseId && results.length > 0) {
       const sampleIds = results.map(f => f.sampleId);
-      const locationData = await this.repository.query(
+
+      // Nguồn 1: Từ transaction có location_id (IMPORT/EXPORT lưu location)
+      const txLocationData = await this.repository.query(
         `SELECT DISTINCT ON (tx.sample_id)
           tx.sample_id as "sampleId",
           loc.name as "locationName"
         FROM inventory_transactions tx
-        LEFT JOIN storage_locations loc ON loc.id = tx.location_id
+        INNER JOIN storage_locations loc ON loc.id = tx.location_id
         WHERE tx.warehouse_id = $1
           AND tx.sample_id = ANY($2)
         ORDER BY tx.sample_id, tx.created_at DESC`,
         [warehouseId, sampleIds],
       );
 
-      const locationMap = new Map(locationData.map((l: any) => [l.sampleId, l.locationName]));
+      const locationMap = new Map(txLocationData.map((l: any) => [l.sampleId, l.locationName]));
+
+      // Nguồn 2: Fallback từ Sample.currentLocation (TRANSFER không lưu locationId trong transaction)
+      const missingSampleIds = sampleIds.filter(id => !locationMap.has(id));
+      if (missingSampleIds.length > 0) {
+        const sampleLocationData = await this.repository.query(
+          `SELECT s.id as "sampleId", sl.name as "locationName"
+           FROM samples s
+           INNER JOIN storage_locations sl ON sl.id = s.current_location_id
+           WHERE s.id = ANY($1)
+             AND s.current_warehouse_id = $2`,
+          [missingSampleIds, warehouseId],
+        );
+        for (const sl of sampleLocationData) {
+          if (sl.locationName) locationMap.set(sl.sampleId, sl.locationName);
+        }
+      }
+
       results = results.map(f => ({
         ...f,
         locationName: locationMap.get(f.sampleId) || null,

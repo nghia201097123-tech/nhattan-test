@@ -320,6 +320,7 @@ export class TransfersService {
         const transaction = this.transactionRepo.create({
           sampleId: item.sampleId,
           warehouseId: transfer.fromWarehouseId,
+          locationId: item.fromLocationId || null,
           transactionType: TransactionType.TRANSFER_OUT,
           quantity: -item.quantity,
           unit: this.normalizeUnit(item.unit || 'gram'),
@@ -373,6 +374,7 @@ export class TransfersService {
         const transaction = this.transactionRepo.create({
           sampleId: item.sampleId,
           warehouseId: transfer.toWarehouseId,
+          locationId: item.toLocationId || null,
           transactionType: TransactionType.TRANSFER_IN,
           quantity: item.quantity,
           unit: this.normalizeUnit(item.unit || 'gram'),
