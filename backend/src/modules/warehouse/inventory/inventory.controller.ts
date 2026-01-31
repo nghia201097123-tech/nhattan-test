@@ -23,6 +23,22 @@ export class InventoryController {
     return this.service.findAll(query);
   }
 
+  @Get('warehouse-card')
+  @ApiOperation({ summary: 'Get warehouse card list with real stock from transactions' })
+  async getWarehouseCardList(
+    @Query('warehouseId') warehouseId?: string,
+    @Query('search') search?: string,
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
+  ) {
+    return this.service.getWarehouseCardList({
+      warehouseId,
+      search,
+      page: page ? Number(page) : 1,
+      limit: limit ? Number(limit) : 20,
+    });
+  }
+
   @Get('available-stock')
   @ApiOperation({ summary: 'Get available stock for a sample in a warehouse' })
   async getAvailableStock(

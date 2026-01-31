@@ -189,6 +189,19 @@ export const inventoryService = {
     return response.data;
   },
 
+  async getWarehouseCardList(params?: {
+    warehouseId?: string;
+    search?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<PaginatedResult<any>> {
+    const response = await api.get<PaginatedResult<any>>(
+      '/warehouse/inventory/warehouse-card',
+      { params },
+    );
+    return response.data;
+  },
+
   async getAvailableStock(warehouseId: string, sampleId: string): Promise<{
     sampleId: string;
     warehouseId: string;

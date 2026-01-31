@@ -23,10 +23,10 @@ import {
   ExportOutlined,
   SwapOutlined,
   SettingOutlined,
+  EnvironmentOutlined,
 } from '@ant-design/icons';
 import { inventoryService } from '@/services/warehouse.service';
 import { warehousesService } from '@/services/catalog.service';
-import { samplesService } from '@/services/samples.service';
 import dayjs from 'dayjs';
 
 const { Title, Text } = Typography;
@@ -83,7 +83,7 @@ export default function WarehouseCardPage() {
   const fetchSamples = async () => {
     setLoading(true);
     try {
-      const result = await samplesService.getAll({
+      const result = await inventoryService.getWarehouseCardList({
         page,
         limit,
         search,
@@ -113,7 +113,10 @@ export default function WarehouseCardPage() {
     setStockCardLoading(true);
 
     try {
-      const data = await inventoryService.getStockCard(sample.id, warehouseId);
+      const data = await inventoryService.getStockCard(
+        sample.sampleId,
+        warehouseId,
+      );
       setStockCard(data || []);
     } catch (error) {
       console.error('Error loading stock card:', error);
@@ -127,47 +130,48 @@ export default function WarehouseCardPage() {
   const columns = [
     {
       title: 'Mã mẫu',
-      dataIndex: 'code',
+      dataIndex: 'sampleCode',
       key: 'code',
       width: 140,
     },
     {
       title: 'Tên giống',
+      dataIndex: 'varietyName',
       key: 'varietyName',
-      render: (_: any, record: any) => record.varietyName || record.localName || '-',
     },
     {
       title: 'Loại',
-      dataIndex: ['category', 'name'],
+      dataIndex: 'categoryName',
       key: 'category',
     },
     {
       title: 'Kho hiện tại',
-      dataIndex: ['warehouse', 'name'],
+      dataIndex: 'warehouseName',
       key: 'warehouse',
+      render: (name: string) => name || '-',
     },
     {
       title: 'Vị trí',
-      dataIndex: ['storageLocation', 'name'],
+      dataIndex: 'locationName',
       key: 'location',
       render: (name: string) => name || '-',
     },
     {
       title: 'Số lượng hiện tại',
-      dataIndex: 'currentQuantity',
-      key: 'currentQuantity',
+      dataIndex: 'currentStock',
+      key: 'currentStock',
       width: 140,
       align: 'right' as const,
       render: (qty: number, record: any) => (
         <span style={{ fontWeight: 'bold' }}>
-          {qty || 0} {record.unit || 'g'}
+          {Number(qty || 0).toFixed(2)} {record.unit || 'g'}
         </span>
       ),
     },
     {
       title: 'Thao tác',
       key: 'actions',
-      width: 100,
+      width: 130,
       render: (_: any, record: any) => (
         <Button
           type="link"
@@ -201,7 +205,10 @@ export default function WarehouseCardPage() {
             style={{ width: 200 }}
             allowClear
             value={warehouseId}
-            onChange={setWarehouseId}
+            onChange={(val) => {
+              setWarehouseId(val);
+              setPage(1);
+            }}
           >
             {warehouses.map(w => (
               <Select.Option key={w.id} value={w.id}>{w.name}</Select.Option>
@@ -212,7 +219,7 @@ export default function WarehouseCardPage() {
         <Table
           dataSource={samples}
           columns={columns}
-          rowKey="id"
+          rowKey="sampleId"
           loading={loading}
           pagination={{
             current: page,
@@ -239,16 +246,16 @@ export default function WarehouseCardPage() {
         {selectedSample && (
           <>
             <Descriptions column={2} bordered size="small" style={{ marginBottom: 24 }}>
-              <Descriptions.Item label="Mã mẫu">{selectedSample.code}</Descriptions.Item>
+              <Descriptions.Item label="Mã mẫu">{selectedSample.sampleCode}</Descriptions.Item>
               <Descriptions.Item label="Tên giống">
-                {selectedSample.varietyName || selectedSample.localName || '-'}
+                {selectedSample.varietyName || '-'}
               </Descriptions.Item>
-              <Descriptions.Item label="Loại">{selectedSample.category?.name || '-'}</Descriptions.Item>
-              <Descriptions.Item label="Kho hiện tại">{selectedSample.warehouse?.name || '-'}</Descriptions.Item>
-              <Descriptions.Item label="Vị trí">{selectedSample.storageLocation?.name || '-'}</Descriptions.Item>
+              <Descriptions.Item label="Loại">{selectedSample.categoryName || '-'}</Descriptions.Item>
+              <Descriptions.Item label="Kho hiện tại">{selectedSample.warehouseName || '-'}</Descriptions.Item>
+              <Descriptions.Item label="Vị trí">{selectedSample.locationName || '-'}</Descriptions.Item>
               <Descriptions.Item label="Số lượng hiện tại">
                 <Text strong style={{ fontSize: 16 }}>
-                  {selectedSample.currentQuantity || 0} {selectedSample.unit || 'g'}
+                  {Number(selectedSample.currentStock || 0).toFixed(2)} {selectedSample.unit || 'g'}
                 </Text>
               </Descriptions.Item>
             </Descriptions>
@@ -256,7 +263,7 @@ export default function WarehouseCardPage() {
             <Card title="Lịch sử biến động" loading={stockCardLoading}>
               {stockCard.length > 0 ? (
                 <Timeline
-                  items={stockCard.map((tx, index) => ({
+                  items={stockCard.map((tx) => ({
                     color: transactionTypeColors[tx.transactionType] || 'gray',
                     dot: transactionTypeIcons[tx.transactionType],
                     children: (
@@ -286,6 +293,14 @@ export default function WarehouseCardPage() {
                             </div>
                           </div>
                         </div>
+                        {(tx.warehouse?.name || tx.location?.name) && (
+                          <div style={{ marginTop: 4 }}>
+                            <EnvironmentOutlined style={{ color: '#999', marginRight: 4 }} />
+                            <Text type="secondary">
+                              {tx.warehouse?.name}{tx.location?.name ? ` - ${tx.location.name}` : ''}
+                            </Text>
+                          </div>
+                        )}
                         {tx.notes && (
                           <div style={{ marginTop: 4 }}>
                             <Text type="secondary" italic>{tx.notes}</Text>

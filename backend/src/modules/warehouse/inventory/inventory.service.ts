@@ -139,6 +139,123 @@ export class InventoryService {
     });
   }
 
+  // Danh sách thẻ kho: tính tồn kho thực từ transactions
+  async getWarehouseCardList(query: {
+    warehouseId?: string;
+    search?: string;
+    page?: number;
+    limit?: number;
+  }) {
+    const { warehouseId, search, page = 1, limit = 20 } = query;
+
+    const qb = this.repository
+      .createQueryBuilder('tx')
+      .select('tx.sampleId', 'sampleId')
+      .addSelect('sample.code', 'sampleCode')
+      .addSelect('sample.varietyName', 'varietyName')
+      .addSelect('sample.localName', 'localName')
+      .addSelect('sample.quantityUnit', 'unit')
+      .addSelect('category.name', 'categoryName')
+      .addSelect(
+        `SUM(CASE WHEN tx.transactionType IN ('IMPORT', 'TRANSFER_IN') THEN ABS(tx.quantity) ELSE 0 END)`,
+        'totalIn',
+      )
+      .addSelect(
+        `SUM(CASE WHEN tx.transactionType IN ('EXPORT', 'TRANSFER_OUT') THEN ABS(tx.quantity) ELSE 0 END)`,
+        'totalOut',
+      )
+      .leftJoin('tx.sample', 'sample')
+      .leftJoin('sample.category', 'category')
+      .where('sample.deletedAt IS NULL');
+
+    if (warehouseId) {
+      qb.addSelect('warehouse.id', 'warehouseId')
+        .addSelect('warehouse.name', 'warehouseName')
+        .leftJoin('tx.warehouse', 'warehouse')
+        .andWhere('tx.warehouseId = :warehouseId', { warehouseId });
+
+      qb.groupBy('tx.sampleId')
+        .addGroupBy('sample.code')
+        .addGroupBy('sample.varietyName')
+        .addGroupBy('sample.localName')
+        .addGroupBy('sample.quantityUnit')
+        .addGroupBy('category.name')
+        .addGroupBy('warehouse.id')
+        .addGroupBy('warehouse.name');
+    } else {
+      qb.addSelect('curWh.id', 'warehouseId')
+        .addSelect('curWh.name', 'warehouseName')
+        .addSelect('curLoc.name', 'locationName')
+        .leftJoin('sample.currentWarehouse', 'curWh')
+        .leftJoin('sample.currentLocation', 'curLoc');
+
+      qb.groupBy('tx.sampleId')
+        .addGroupBy('sample.code')
+        .addGroupBy('sample.varietyName')
+        .addGroupBy('sample.localName')
+        .addGroupBy('sample.quantityUnit')
+        .addGroupBy('category.name')
+        .addGroupBy('curWh.id')
+        .addGroupBy('curWh.name')
+        .addGroupBy('curLoc.name');
+    }
+
+    if (search) {
+      qb.andWhere(
+        '(sample.code ILIKE :search OR sample.varietyName ILIKE :search OR sample.localName ILIKE :search)',
+        { search: `%${search}%` },
+      );
+    }
+
+    const rawData = await qb.getRawMany();
+
+    let results = rawData
+      .map(r => ({
+        sampleId: r.sampleId,
+        sampleCode: r.sampleCode,
+        varietyName: r.varietyName || r.localName || '-',
+        categoryName: r.categoryName || '-',
+        warehouseId: r.warehouseId || null,
+        warehouseName: r.warehouseName || null,
+        locationName: r.locationName || null,
+        currentStock: Number(r.totalIn) - Number(r.totalOut),
+        unit: r.unit || 'gram',
+      }))
+      .filter(r => r.currentStock > 0)
+      .sort((a, b) => (a.sampleCode || '').localeCompare(b.sampleCode || ''));
+
+    // Lấy vị trí từ transaction gần nhất khi lọc theo kho
+    if (warehouseId && results.length > 0) {
+      const sampleIds = results.map(f => f.sampleId);
+      const locationData = await this.repository.query(
+        `SELECT DISTINCT ON (tx.sample_id)
+          tx.sample_id as "sampleId",
+          loc.name as "locationName"
+        FROM inventory_transactions tx
+        LEFT JOIN storage_locations loc ON loc.id = tx.location_id
+        WHERE tx.warehouse_id = $1
+          AND tx.sample_id = ANY($2)
+        ORDER BY tx.sample_id, tx.created_at DESC`,
+        [warehouseId, sampleIds],
+      );
+
+      const locationMap = new Map(locationData.map((l: any) => [l.sampleId, l.locationName]));
+      results = results.map(f => ({
+        ...f,
+        locationName: locationMap.get(f.sampleId) || null,
+      }));
+    }
+
+    const total = results.length;
+    const offset = (page - 1) * limit;
+    const data = results.slice(offset, offset + limit);
+
+    return {
+      data,
+      meta: { page, limit, total, totalPages: Math.ceil(total / limit) },
+    };
+  }
+
   // Thống kê nhập-xuất-tồn theo kỳ
   async getInventoryReport(query: {
     warehouseId?: string;
