@@ -378,7 +378,7 @@ export default function SeedCardPage() {
     const historyColumns = [
       {
         title: 'Ngày',
-        dataIndex: 'transactionDate',
+        dataIndex: 'createdAt',
         key: 'date',
         width: 150,
         render: (d: string) => d ? dayjs(d).format('DD/MM/YYYY HH:mm') : '-',
