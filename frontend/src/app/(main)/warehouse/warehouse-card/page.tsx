@@ -55,6 +55,16 @@ const transactionTypeIcons: Record<string, React.ReactNode> = {
   ADJUSTMENT: <SettingOutlined style={{ color: '#722ed1' }} />,
 };
 
+// Build full location path: Tủ - Kệ - Ngăn
+const getLocationPath = (location: any): string | null => {
+  if (!location) return null;
+  const parts: string[] = [];
+  if (location.parent?.parent?.name) parts.push(location.parent.parent.name);
+  if (location.parent?.name) parts.push(location.parent.name);
+  parts.push(location.name);
+  return parts.join(' - ');
+};
+
 export default function WarehouseCardPage() {
   const [loading, setLoading] = useState(false);
   const [samples, setSamples] = useState<any[]>([]);
@@ -293,11 +303,11 @@ export default function WarehouseCardPage() {
                             </div>
                           </div>
                         </div>
-                        {(tx.warehouse?.name || tx.location?.name) && (
+                        {(tx.warehouse?.name || tx.location) && (
                           <div style={{ marginTop: 4 }}>
                             <EnvironmentOutlined style={{ color: '#999', marginRight: 4 }} />
                             <Text type="secondary">
-                              {tx.warehouse?.name}{tx.location?.name ? ` - ${tx.location.name}` : ''}
+                              {tx.warehouse?.name}{getLocationPath(tx.location) ? ` - ${getLocationPath(tx.location)}` : ''}
                             </Text>
                           </div>
                         )}

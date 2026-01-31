@@ -117,6 +117,8 @@ export class InventoryService {
       .leftJoinAndSelect('tx.sample', 'sample')
       .leftJoinAndSelect('tx.warehouse', 'warehouse')
       .leftJoinAndSelect('tx.location', 'location')
+      .leftJoinAndSelect('location.parent', 'locationParent')
+      .leftJoinAndSelect('locationParent.parent', 'locationGrandparent')
       .where('tx.sampleId = :sampleId', { sampleId });
 
     if (warehouseId) {
@@ -185,9 +187,18 @@ export class InventoryService {
     } else {
       qb.addSelect('curWh.id', 'warehouseId')
         .addSelect('curWh.name', 'warehouseName')
-        .addSelect('curLoc.name', 'locationName')
+        .addSelect(
+          `CASE
+            WHEN "locP2"."name" IS NOT NULL THEN "locP2"."name" || ' - ' || "locP1"."name" || ' - ' || "curLoc"."name"
+            WHEN "locP1"."name" IS NOT NULL THEN "locP1"."name" || ' - ' || "curLoc"."name"
+            ELSE "curLoc"."name"
+          END`,
+          'locationName',
+        )
         .leftJoin('sample.currentWarehouse', 'curWh')
-        .leftJoin('sample.currentLocation', 'curLoc');
+        .leftJoin('sample.currentLocation', 'curLoc')
+        .leftJoin('curLoc.parent', 'locP1')
+        .leftJoin('locP1.parent', 'locP2');
 
       qb.groupBy('tx.sampleId')
         .addGroupBy('sample.code')
@@ -197,7 +208,9 @@ export class InventoryService {
         .addGroupBy('category.name')
         .addGroupBy('curWh.id')
         .addGroupBy('curWh.name')
-        .addGroupBy('curLoc.name');
+        .addGroupBy('curLoc.name')
+        .addGroupBy('locP1.name')
+        .addGroupBy('locP2.name');
     }
 
     if (search) {
@@ -229,12 +242,19 @@ export class InventoryService {
       const sampleIds = results.map(f => f.sampleId);
 
       // Nguồn 1: Từ transaction có location_id (IMPORT/EXPORT lưu location)
+      // Build full path: Tủ - Kệ - Ngăn qua parent hierarchy
       const txLocationData = await this.repository.query(
         `SELECT DISTINCT ON (tx.sample_id)
           tx.sample_id as "sampleId",
-          loc.name as "locationName"
+          CASE
+            WHEN p2.name IS NOT NULL THEN p2.name || ' - ' || p1.name || ' - ' || loc.name
+            WHEN p1.name IS NOT NULL THEN p1.name || ' - ' || loc.name
+            ELSE loc.name
+          END as "locationName"
         FROM inventory_transactions tx
         INNER JOIN storage_locations loc ON loc.id = tx.location_id
+        LEFT JOIN storage_locations p1 ON p1.id = loc.parent_id
+        LEFT JOIN storage_locations p2 ON p2.id = p1.parent_id
         WHERE tx.warehouse_id = $1
           AND tx.sample_id = ANY($2)
         ORDER BY tx.sample_id, tx.created_at DESC`,
@@ -247,9 +267,16 @@ export class InventoryService {
       const missingSampleIds = sampleIds.filter(id => !locationMap.has(id));
       if (missingSampleIds.length > 0) {
         const sampleLocationData = await this.repository.query(
-          `SELECT s.id as "sampleId", sl.name as "locationName"
+          `SELECT s.id as "sampleId",
+            CASE
+              WHEN p2.name IS NOT NULL THEN p2.name || ' - ' || p1.name || ' - ' || sl.name
+              WHEN p1.name IS NOT NULL THEN p1.name || ' - ' || sl.name
+              ELSE sl.name
+            END as "locationName"
            FROM samples s
            INNER JOIN storage_locations sl ON sl.id = s.current_location_id
+           LEFT JOIN storage_locations p1 ON p1.id = sl.parent_id
+           LEFT JOIN storage_locations p2 ON p2.id = p1.parent_id
            WHERE s.id = ANY($1)
              AND s.current_warehouse_id = $2`,
           [missingSampleIds, warehouseId],
