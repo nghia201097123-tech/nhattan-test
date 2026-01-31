@@ -122,6 +122,8 @@ export class CollectionService {
 
     // Tính tổng nhập/xuất/chuyển kho
     let totalImported = 0, totalExported = 0, totalTransferIn = 0, totalTransferOut = 0;
+    const warehouseStockMap = new Map<string, { warehouseId: string; warehouseName: string; stock: number }>();
+
     for (const t of transactions) {
       const qty = Math.abs(Number(t.quantity));
       switch (t.transactionType) {
@@ -130,9 +132,28 @@ export class CollectionService {
         case 'TRANSFER_IN': totalTransferIn += qty; break;
         case 'TRANSFER_OUT': totalTransferOut += qty; break;
       }
+
+      // Tính tồn kho theo từng kho
+      const whId = t.warehouseId;
+      if (whId) {
+        if (!warehouseStockMap.has(whId)) {
+          warehouseStockMap.set(whId, {
+            warehouseId: whId,
+            warehouseName: t.warehouse?.name || 'Không xác định',
+            stock: 0,
+          });
+        }
+        const entry = warehouseStockMap.get(whId)!;
+        if (t.transactionType === 'IMPORT' || t.transactionType === 'TRANSFER_IN') {
+          entry.stock += qty;
+        } else if (t.transactionType === 'EXPORT' || t.transactionType === 'TRANSFER_OUT') {
+          entry.stock -= qty;
+        }
+      }
     }
 
     const initial = Number(sample.initialQuantity || 0);
+    const stockByWarehouse = Array.from(warehouseStockMap.values()).filter(w => w.stock !== 0);
 
     return {
       ...sample,
@@ -145,6 +166,7 @@ export class CollectionService {
         remainingForImport: Math.max(0, initial - totalImported),
         currentStock: totalImported + totalTransferIn - totalExported - totalTransferOut,
         unit: sample.quantityUnit || 'gram',
+        stockByWarehouse,
       },
       warehouseHistory: transactions,
       evaluations,

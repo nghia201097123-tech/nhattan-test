@@ -409,7 +409,12 @@ export default function SeedCardPage() {
         title: 'Ghi chú',
         dataIndex: 'notes',
         key: 'notes',
-        ellipsis: true,
+        width: 200,
+        render: (text: string) => text ? (
+          <Tooltip title={text} placement="topLeft">
+            <span style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{text}</span>
+          </Tooltip>
+        ) : '-',
       },
     ];
 
@@ -692,12 +697,34 @@ export default function SeedCardPage() {
                 </Col>
                 <Col>
                   {fullInfo.quantitySummary && (
-                    <Statistic
-                      title="Tồn kho"
-                      value={fullInfo.quantitySummary.currentStock}
-                      suffix={fullInfo.quantitySummary.unit}
-                      valueStyle={{ color: fullInfo.quantitySummary.currentStock > 0 ? '#52c41a' : '#ff4d4f' }}
-                    />
+                    <div style={{ textAlign: 'right' }}>
+                      <Text type="secondary" style={{ fontSize: 12 }}>Tồn kho</Text>
+                      {fullInfo.quantitySummary.stockByWarehouse?.length > 0 ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginTop: 4 }}>
+                          {fullInfo.quantitySummary.stockByWarehouse.map((wh: any) => (
+                            <div key={wh.warehouseId} style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
+                              <Text type="secondary" style={{ fontSize: 13 }}>{wh.warehouseName}:</Text>
+                              <Text strong style={{ fontSize: 14, color: wh.stock > 0 ? '#52c41a' : '#ff4d4f' }}>
+                                {wh.stock} {fullInfo.quantitySummary.unit}
+                              </Text>
+                            </div>
+                          ))}
+                          <Divider style={{ margin: '4px 0' }} />
+                          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
+                            <Text type="secondary" style={{ fontSize: 13 }}>Tổng:</Text>
+                            <Text strong style={{ fontSize: 16, color: fullInfo.quantitySummary.currentStock > 0 ? '#52c41a' : '#ff4d4f' }}>
+                              {fullInfo.quantitySummary.currentStock} {fullInfo.quantitySummary.unit}
+                            </Text>
+                          </div>
+                        </div>
+                      ) : (
+                        <div style={{ marginTop: 4 }}>
+                          <Text strong style={{ fontSize: 20, color: fullInfo.quantitySummary.currentStock > 0 ? '#52c41a' : '#ff4d4f' }}>
+                            {fullInfo.quantitySummary.currentStock} <span style={{ fontSize: 14 }}>{fullInfo.quantitySummary.unit}</span>
+                          </Text>
+                        </div>
+                      )}
+                    </div>
                   )}
                 </Col>
               </Row>
